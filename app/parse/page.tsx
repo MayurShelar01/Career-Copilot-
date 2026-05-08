@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, CheckCircle2, ArrowLeft, Loader2, Copy, Check } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ArrowLeft, Loader2, Copy, Check, Download, X } from "lucide-react";
 import { storage } from "@/lib/storage/localStorage";
 import { ParsedJD, ResumeAnalysis, OutreachTone, ColdOutreach, PrepPlan, ApplicationCard } from "@/types";
 import { CardSkeleton, PlanDaySkeleton } from "@/components/shared/Skeleton";
@@ -51,6 +51,46 @@ function ParsePageContent() {
 
   const charCount = jdText.length;
   const canSubmit = charCount >= 100 && !loading;
+
+  // JD URL Import state
+  const [jdInputMode, setJdInputMode] = useState<"paste" | "url">("paste");
+  const [jdUrl, setJdUrl] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState<{ source: string; charCount: number } | null>(null);
+
+  function isValidURL(str: string): boolean {
+    if (!str) return false;
+    try { new URL(str); return true; } catch { return false; }
+  }
+
+  async function handleImportURL() {
+    setIsImporting(true);
+    setImportError(null);
+    setImportSuccess(null);
+    try {
+      const response = await fetch("/api/import-jd-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: jdUrl }),
+      });
+      const res = await response.json();
+      if (!res.success) {
+        setImportError(res.error || "Failed to import JD");
+        return;
+      }
+      // Switch to paste mode and populate textarea
+      setJdInputMode("paste");
+      setJdText(res.data.text);
+      setImportSuccess({ source: res.data.source, charCount: res.data.text.length });
+      setTimeout(() => setImportSuccess(null), 3000);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Network error";
+      setImportError(message);
+    } finally {
+      setIsImporting(false);
+    }
+  }
 
   const resumeCharCount = resumeText.length;
   const canAnalyze = resumeCharCount >= 200 && !analyzing;
@@ -339,42 +379,126 @@ function ParsePageContent() {
           </div>
 
           <div className="space-y-4">
-            <Textarea
-              value={jdText}
-              onChange={(e) => setJdText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Paste the full job description here..."
-              className="min-h-[300px] resize-y bg-card border-border focus-visible:ring-primary text-base p-4"
-            />
-
-            <div className="flex justify-between items-center">
-              <span className={`text-sm ${charCount >= 100 ? "text-primary" : "text-muted-foreground"}`}>
-                {charCount} / 100 chars
-              </span>
-              <Button onClick={handleParse} disabled={!canSubmit} className={`transition-all duration-300 ${loading ? "animate-pulse" : ""}`}>
-                {loading ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analyzing...</>
-                ) : (
-                  "Parse JD"
-                )}
-              </Button>
+            {/* Mode toggle */}
+            <div className="flex items-center gap-2 mb-3">
+              <button
+                onClick={() => setJdInputMode("paste")}
+                className={`px-4 py-1.5 text-sm rounded-md border transition-colors ${
+                  jdInputMode === "paste"
+                    ? "bg-[#A78BFA]/10 text-[#A78BFA] border-[#A78BFA]/30"
+                    : "text-[#A1A1AA] border-[#262626] hover:bg-[#262626]/30"
+                }`}
+              >
+                Paste Text
+              </button>
+              <button
+                onClick={() => setJdInputMode("url")}
+                className={`px-4 py-1.5 text-sm rounded-md border transition-colors ${
+                  jdInputMode === "url"
+                    ? "bg-[#A78BFA]/10 text-[#A78BFA] border-[#A78BFA]/30"
+                    : "text-[#A1A1AA] border-[#262626] hover:bg-[#262626]/30"
+                }`}
+              >
+                Import from URL
+              </button>
             </div>
-            
-            {loading && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                <CardSkeleton />
-                <CardSkeleton />
-                <CardSkeleton />
-                <CardSkeleton />
+
+            {/* Success banner (shown in paste mode after successful import) */}
+            {importSuccess && jdInputMode === "paste" && (
+              <div className="flex items-center justify-between rounded-md bg-[#A78BFA]/10 px-3 py-2">
+                <span className="text-sm text-[#A78BFA]">
+                  ✓ Imported {importSuccess.charCount.toLocaleString()} chars from {importSuccess.source.charAt(0).toUpperCase() + importSuccess.source.slice(1)}
+                </span>
+                <button onClick={() => setImportSuccess(null)} className="text-[#A78BFA]/60 hover:text-[#A78BFA] ml-3">
+                  <X className="w-3 h-3" />
+                </button>
               </div>
             )}
 
-            {error && (
-              <Alert variant="destructive" className="mt-4 border-destructive/50 bg-destructive/10 text-destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
+            {/* PASTE MODE */}
+            {jdInputMode === "paste" && (
+              <>
+                <Textarea
+                  value={jdText}
+                  onChange={(e) => setJdText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Paste the full job description here..."
+                  className="min-h-[300px] resize-y bg-card border-border focus-visible:ring-primary text-base p-4"
+                />
+
+                <div className="flex justify-between items-center">
+                  <span className={`text-sm ${charCount >= 100 ? "text-primary" : "text-muted-foreground"}`}>
+                    {charCount} / 100 chars
+                  </span>
+                  <Button onClick={handleParse} disabled={!canSubmit} className={`transition-all duration-300 ${loading ? "animate-pulse" : ""}`}>
+                    {loading ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analyzing...</>
+                    ) : (
+                      "Parse JD"
+                    )}
+                  </Button>
+                </div>
+
+                {loading && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <CardSkeleton />
+                    <CardSkeleton />
+                    <CardSkeleton />
+                    <CardSkeleton />
+                  </div>
+                )}
+
+                {error && (
+                  <Alert variant="destructive" className="mt-4 border-destructive/50 bg-destructive/10 text-destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+              </>
+            )}
+
+            {/* URL IMPORT MODE */}
+            {jdInputMode === "url" && (
+              <div className="space-y-3">
+                <input
+                  type="url"
+                  value={jdUrl}
+                  onChange={(e) => setJdUrl(e.target.value)}
+                  placeholder="Paste a Greenhouse, Lever, or Workday URL..."
+                  className="w-full bg-[#0A0A0A] border border-[#262626] rounded-md p-3 text-sm text-[#FAFAFA] placeholder-[#52525B] focus:border-[#A78BFA] focus:outline-none transition-colors"
+                  onKeyDown={(e) => e.key === "Enter" && isValidURL(jdUrl) && !isImporting && handleImportURL()}
+                />
+
+                <div className="text-xs text-[#A1A1AA]">
+                  Supported: <span className="text-[#FAFAFA]">Greenhouse</span>, <span className="text-[#FAFAFA]">Lever</span>, <span className="text-[#FAFAFA]">Workday</span>. LinkedIn and Indeed not supported — paste text instead.
+                </div>
+
+                <Button
+                  onClick={handleImportURL}
+                  disabled={!isValidURL(jdUrl) || isImporting}
+                  className="transition-all duration-300"
+                >
+                  {isImporting ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Importing...</>
+                  ) : (
+                    <><Download className="w-4 h-4 mr-2" />Import JD</>
+                  )}
+                </Button>
+
+                {/* Error message */}
+                {importError && (
+                  <div className="flex items-start justify-between rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 gap-2 mt-2">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+                      <span className="text-sm text-red-400">{importError}</span>
+                    </div>
+                    <button onClick={() => setImportError(null)} className="text-red-400/60 hover:text-red-400 ml-1 shrink-0">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
