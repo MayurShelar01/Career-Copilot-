@@ -3,26 +3,29 @@
 An AI-powered web app that turns a job description + resume into a complete application strategy.
 
 ## Tech Stack
-- Next.js 14 with App Router
-- TypeScript (strict mode)
-- TailwindCSS
-- shadcn/ui
-- Google Gemini API (@google/generative-ai)
-- Storage: Supabase Postgres
-- Authentication: Google OAuth (via Supabase Auth)
+- **Framework**: Next.js 14 (App Router, TypeScript)
+- **Styling**: TailwindCSS + shadcn/ui
+- **Database**: Supabase (Auth + Postgres + RLS)
+- **Authentication**: Google OAuth
+- **AI**: Gemini AI (via LangChain-compatible abstraction)
+- **Deployment**: Vercel
 
-## Setup Instructions
-1. Run `npm install` to install dependencies.
-2. Copy `.env.example` to `.env.local` and add your `GEMINI_API_KEY`.
-3. Add your Supabase credentials (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) to `.env.local`.
-4. Run `npm run dev` to start the development server on localhost:3000.
+## Architecture Highlights
+- **AI provider abstraction**: Switch from Gemini to Claude/OpenAI with one env var via `lib/ai/provider.ts`.
+- **Storage abstraction**: Migrated from browser localStorage to Supabase Postgres with zero frontend rewrites by maintaining a unified storage interface.
+- **Row-Level Security**: Database-enforced multi-tenancy from day 1, ensuring user data isolation.
 
-## Architecture Note
-All AI calls go through `lib/ai/provider.ts` — swap providers by changing the `AI_PROVIDER` env var.
+## Setup
+1. **Clone repo**: `git clone <repo-url>`
+2. **Install dependencies**: `npm install`
+3. **Supabase Setup**: Create a Supabase project and enable Google OAuth in the Authentication providers.
+4. **Environment Variables**: Copy `.env.example` → `.env.local` and fill in your Gemini API key and Supabase credentials.
+5. **Run local server**: `npm run dev`
 
 ## Roadmap
 - Phase 1: Scaffold the project foundation (Completed)
-- Phase 2: JD Parser & Resume Gap Analysis
-- Phase 3: Application Strategy Generator
-- Phase 4: LinkedIn Outreach & Prep Plan
-- Phase 5: Application Tracker
+- Phase 2: JD Parser & Resume Gap Analysis (Completed)
+- Phase 3: Application Strategy Generator (Completed)
+- Phase 4: LinkedIn Outreach & Prep Plan (Completed)
+- Phase 5: Application Tracker (Completed)
+- **Phase 6: Cloud Migration & Auth** (Completed)
