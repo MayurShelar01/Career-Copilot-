@@ -2,9 +2,22 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Search, FileCheck, PenTool, MessageSquare, Calendar, Layout } from "lucide-react";
+import { Search, FileCheck, PenTool, MessageSquare, Calendar, Layout, Loader2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { useEffect, useState } from "react";
+import type { User } from "@supabase/supabase-js";
 
 export default function Home() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+      setLoading(false);
+    });
+  }, []);
   const features = [
     {
       icon: <Search className="w-6 h-6 text-violet-500" />,
@@ -61,11 +74,23 @@ export default function Home() {
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <Link href="/parse">
-              <Button size="lg" className="w-full sm:w-auto text-lg px-8 py-6 rounded-full bg-violet-500 hover:bg-violet-600 text-white shadow-[0_0_40px_-10px_rgba(167,139,250,0.5)] transition-all">
-                Start for Free →
+            {loading ? (
+              <Button size="lg" disabled className="w-full sm:w-auto text-lg px-8 py-6 rounded-full bg-violet-500 text-white opacity-70">
+                <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading...
               </Button>
-            </Link>
+            ) : user ? (
+              <Link href="/parse">
+                <Button size="lg" className="w-full sm:w-auto text-lg px-8 py-6 rounded-full bg-violet-500 hover:bg-violet-600 text-white shadow-[0_0_40px_-10px_rgba(167,139,250,0.5)] transition-all">
+                  Open Workspace →
+                </Button>
+              </Link>
+            ) : (
+              <Link href="/login">
+                <Button size="lg" className="w-full sm:w-auto text-lg px-8 py-6 rounded-full bg-violet-500 hover:bg-violet-600 text-white shadow-[0_0_40px_-10px_rgba(167,139,250,0.5)] transition-all">
+                  Sign in with Google →
+                </Button>
+              </Link>
+            )}
             <Link href="/tracker">
               <Button variant="ghost" size="lg" className="w-full sm:w-auto text-lg px-8 py-6 rounded-full border border-[#262626] hover:bg-[#111111] transition-all">
                 View Tracker
@@ -101,18 +126,30 @@ export default function Home() {
         {/* 3. Bottom CTA */}
         <section className="w-full text-center space-y-8 pb-20 pt-10 border-t border-[#262626]">
           <h2 className="text-3xl font-bold text-foreground">Ready to apply smarter?</h2>
-          <Link href="/parse">
-            <Button size="lg" className="text-lg px-8 py-6 rounded-full bg-violet-500 hover:bg-violet-600 text-white">
-              Parse Your First JD →
+          {loading ? (
+            <Button size="lg" disabled className="text-lg px-8 py-6 rounded-full bg-violet-500 text-white opacity-70">
+              <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading...
             </Button>
-          </Link>
+          ) : user ? (
+            <Link href="/parse">
+              <Button size="lg" className="text-lg px-8 py-6 rounded-full bg-violet-500 hover:bg-violet-600 text-white">
+                Open Workspace →
+              </Button>
+            </Link>
+          ) : (
+            <Link href="/login">
+              <Button size="lg" className="text-lg px-8 py-6 rounded-full bg-violet-500 hover:bg-violet-600 text-white">
+                Sign in with Google →
+              </Button>
+            </Link>
+          )}
         </section>
 
       </div>
       
       <footer className="py-6 z-10 text-center border-t border-[#262626] bg-[#0A0A0A]">
         <p className="text-sm text-muted-foreground">
-          Built by a PM, for PMs · Open source · Your data never leaves your browser
+          Built by a PM, for PMs · Open source · Your data is private and secure
         </p>
       </footer>
     </main>

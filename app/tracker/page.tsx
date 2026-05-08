@@ -21,10 +21,9 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ApplicationCard, ApplicationStatus, ParsedJD, ResumeAnalysis, ColdOutreach, PrepPlan, ApplicationNotes } from "@/types";
-import { storage } from "@/lib/storage/localStorage";
+import { storage } from "@/lib/storage/storage";
 import { Button } from "@/components/ui/button";
-import { Download, ExternalLink, Trash2, AlertTriangle, Bookmark, Inbox, Users, Trophy, XCircle, Check } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Download, ExternalLink, Trash2, Bookmark, Inbox, Users, Trophy, XCircle, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const COLUMNS: ApplicationStatus[] = ["Saved", "Applied", "Interviewing", "Offer", "Rejected"];
@@ -257,53 +256,68 @@ export default function TrackerPage() {
   const [linkedDataCache, setLinkedDataCache] = useState<Record<string, { jd: ParsedJD | null, resume: ResumeAnalysis | null, outreach: ColdOutreach | null, plan: PrepPlan | null }>>({});
 
   useEffect(() => {
-    setApps(storage.getApplications());
-    setMounted(true);
+    const fetchApps = async () => {
+      const fetchedApps = await storage.getApplications();
+      setApps(fetchedApps);
+      setMounted(true);
+    };
+    fetchApps();
   }, []);
 
-  const loadLinkedData = (jdId: string) => {
-    if (linkedDataCache[jdId]) return linkedDataCache[jdId];
-    
-    const data = {
-      jd: storage.getParsedJDById(jdId),
-      resume: storage.getResumeAnalysisByJDId(jdId),
-      outreach: storage.getOutreachByJDId(jdId),
-      plan: storage.getPrepPlanByJDId(jdId)
-    };
-    
-    setLinkedDataCache(prev => ({ ...prev, [jdId]: data }));
-    return data;
-  };
+
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor)
   );
 
-  const toggleExpand = (id: string) => {
-    setExpandedId(prev => prev === id ? null : id);
-  };
-
-  const deleteApp = (id: string) => {
-    if (window.confirm("Delete this application? This action cannot be undone.")) {
-      storage.deleteApplication(id);
-      setApps(storage.getApplications());
+  const toggleExpand = async (id: string) => {
+    if (expandedId === id) {
+      setExpandedId(null);
+      return;
+    }
+    
+    setExpandedId(id);
+    
+    const app = apps.find(a => a.id === id);
+    if (!app) return;
+    
+    const jdId = app.parsedJDId;
+    if (!linkedDataCache[jdId]) {
+      const [jd, resume, outreach, plan] = await Promise.all([
+        storage.getParsedJDById(jdId),
+        storage.getResumeAnalysisByJDId(jdId),
+        storage.getOutreachByJDId(jdId),
+        storage.getPrepPlanByJDId(jdId)
+      ]);
+      
+      setLinkedDataCache(prev => ({ 
+        ...prev, 
+        [jdId]: { jd, resume, outreach, plan } 
+      }));
     }
   };
 
-  const updateNotes = (id: string, notes: ApplicationNotes) => {
-    storage.updateApplicationNotes(id, notes);
+  const deleteApp = async (id: string) => {
+    if (window.confirm("Delete this application? This action cannot be undone.")) {
+      await storage.deleteApplication(id);
+      setApps(await storage.getApplications());
+    }
+  };
+
+  const updateNotes = async (id: string, notes: ApplicationNotes) => {
+    await storage.updateApplicationNotes(id, notes);
     setApps(apps.map(a => a.id === id ? { ...a, notes } : a));
   };
 
-  const exportData = () => {
+  const exportData = async () => {
     const data = {
       exportedAt: new Date().toISOString(),
-      applications: storage.getApplications(),
-      parsedJDs: storage.getParsedJDs(),
-      resumeAnalyses: storage.getResumeAnalyses(),
-      outreaches: storage.getOutreaches(),
-      prepPlans: storage.getPrepPlans(),
+      applications: await storage.getApplications(),
+      parsedJDs: await storage.getParsedJDs(),
+      resumeAnalyses: await storage.getResumeAnalyses(),
+      outreaches: await storage.getOutreaches(),
+      prepPlans: await storage.getPrepPlans(),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -328,7 +342,7 @@ export default function TrackerPage() {
     // Left empty as we rely on dragEnd to persist between columns in this architecture
   };
 
-  const onDragEnd = (event: DragEndEvent) => {
+  const onDragEnd = async (event: DragEndEvent) => {
     setActiveApp(null);
     const { active, over } = event;
     if (!over) return;
@@ -356,7 +370,7 @@ export default function TrackerPage() {
       a.id === cardId ? { ...a, status: newStatus!, updatedAt: new Date().toISOString() } : a
     );
     setApps(updated);
-    storage.updateApplicationStatus(cardId, newStatus);
+    await storage.updateApplicationStatus(cardId, newStatus);
   };
 
   if (!mounted) return null;
@@ -372,16 +386,7 @@ export default function TrackerPage() {
           </div>
           <Button variant="outline" onClick={exportData} className="shrink-0 border-violet-500/50 hover:bg-violet-500/10">
             {exportFeedback ? <><Check className="w-4 h-4 mr-2 text-green-500" /> Exported!</> : <><Download className="w-4 h-4 mr-2" /> Export Backup</>}
-          </Button>
-        </div>
-
-        <Alert className="mb-8 border-amber-500/50 bg-amber-500/10 text-amber-500">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Browser Storage</AlertTitle>
-          <AlertDescription>
-            Your data lives in your browser. Clearing your cache will erase it. Use Export to back up your progress regularly.
-          </AlertDescription>
-        </Alert>
+          </Button>        </div>
 
         <div className="flex-1 overflow-x-auto pb-4">
           <div className="flex gap-4 h-full min-h-[500px]">
@@ -430,7 +435,7 @@ export default function TrackerPage() {
                             toggleExpand={toggleExpand}
                             deleteApp={deleteApp}
                             updateNotes={updateNotes}
-                            linkedData={loadLinkedData(app.parsedJDId)}
+                            linkedData={linkedDataCache[app.parsedJDId] || {}}
                           />
                         ))
                       )}

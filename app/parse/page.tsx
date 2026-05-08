@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, CheckCircle2, ArrowLeft, Loader2, Copy, Check, Download, X } from "lucide-react";
-import { storage } from "@/lib/storage/localStorage";
+import { storage } from "@/lib/storage/storage";
 import { ParsedJD, ResumeAnalysis, OutreachTone, ColdOutreach, PrepPlan, ApplicationCard } from "@/types";
 import { CardSkeleton, PlanDaySkeleton } from "@/components/shared/Skeleton";
 import dynamic from "next/dynamic";
@@ -100,53 +100,57 @@ function ParsePageContent() {
 
   // Initial Hydration
   useEffect(() => {
-    if (storage.isSessionCleared()) return;
+    const fetchInitialData = async () => {
+      const requestedJDId = searchParams.get("resume");
+      
+      if (requestedJDId) {
+        const jd = await storage.getParsedJDById(requestedJDId);
+        if (jd) {
+          setResult(jd);
+          const analysis = await storage.getResumeAnalysisByJDId(requestedJDId);
+          if (analysis) setResumeAnalysis(analysis);
+          
+          const outreachData = await storage.getOutreachByJDId(requestedJDId);
+          if (outreachData) setOutreach(outreachData);
+          
+          const plan = await storage.getPrepPlanByJDId(requestedJDId);
+          if (plan) setPrepPlan(plan);
+          return;
+        }
+      }
 
-    const requestedJDId = searchParams.get("resume");
-    
-    if (requestedJDId) {
-      const jd = storage.getParsedJDById(requestedJDId);
-      if (jd) {
-        setResult(jd);
-        const analysis = storage.getResumeAnalysisByJDId(requestedJDId);
+      const recentJDs = await storage.getParsedJDs();
+      if (recentJDs.length > 0) {
+        const latest = recentJDs[0];
+        setResult(latest);
+        
+        const analysis = await storage.getResumeAnalysisByJDId(latest.id);
         if (analysis) setResumeAnalysis(analysis);
         
-        const outreachData = storage.getOutreachByJDId(requestedJDId);
+        const outreachData = await storage.getOutreachByJDId(latest.id);
         if (outreachData) setOutreach(outreachData);
         
-        const plan = storage.getPrepPlanByJDId(requestedJDId);
+        const plan = await storage.getPrepPlanByJDId(latest.id);
         if (plan) setPrepPlan(plan);
-        return;
       }
-    }
-
-    const recentJDs = storage.getParsedJDs();
-    if (recentJDs.length > 0) {
-      const latest = recentJDs[0];
-      setResult(latest);
-      
-      const analysis = storage.getResumeAnalysisByJDId(latest.id);
-      if (analysis) setResumeAnalysis(analysis);
-      
-      const outreachData = storage.getOutreachByJDId(latest.id);
-      if (outreachData) setOutreach(outreachData);
-      
-      const plan = storage.getPrepPlanByJDId(latest.id);
-      if (plan) setPrepPlan(plan);
-    }
+    };
+    fetchInitialData();
   }, [searchParams]);
 
   // Secondary Hydration (for when result changes within the page)
   useEffect(() => {
     if (result) {
-      const storedOutreach = storage.getOutreachByJDId(result.id);
-      if (storedOutreach) setOutreach(storedOutreach);
+      const fetchSecondaryData = async () => {
+        const storedOutreach = await storage.getOutreachByJDId(result.id);
+        if (storedOutreach) setOutreach(storedOutreach);
 
-      const storedPlan = storage.getPrepPlanByJDId(result.id);
-      if (storedPlan) setPrepPlan(storedPlan);
-      
-      const storedApp = storage.getApplicationByJDId(result.id);
-      setIsSaved(!!storedApp);
+        const storedPlan = await storage.getPrepPlanByJDId(result.id);
+        if (storedPlan) setPrepPlan(storedPlan);
+        
+        const storedApp = await storage.getApplicationByJDId(result.id);
+        setIsSaved(!!storedApp);
+      };
+      fetchSecondaryData();
     }
   }, [result]);
 
@@ -164,8 +168,7 @@ function ParsePageContent() {
       const data = await res.json();
       if (!data.success) throw new Error(data.error || "Failed to parse JD");
       setResult(data.data);
-      storage.saveParsedJD(data.data);
-      storage.clearSessionCleared();
+      await storage.saveParsedJD(data.data);
 
       setTimeout(() => {
         resultsRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -186,7 +189,6 @@ function ParsePageContent() {
   };
 
   const handleReset = () => {
-    storage.setSessionCleared();
     setResult(null);
     setJdText("");
     setError(null);
@@ -217,7 +219,7 @@ function ParsePageContent() {
       const data = await res.json();
       if (!data.success) throw new Error(data.error || "AI couldn't analyze — try again");
       setResumeAnalysis(data.data);
-      storage.saveResumeAnalysis(data.data);
+      await storage.saveResumeAnalysis(data.data);
 
       setTimeout(() => {
         analysisRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -244,7 +246,7 @@ function ParsePageContent() {
       const data = await res.json();
       if (!data.success) throw new Error(data.error || "Failed to generate outreach");
       setOutreach(data.data);
-      storage.saveOutreach(data.data);
+      await storage.saveOutreach(data.data);
       setIsEditingOutreach(false);
 
       setTimeout(() => {
@@ -279,7 +281,7 @@ function ParsePageContent() {
       const data = await res.json();
       if (!data.success) throw new Error(data.error || "Failed to generate prep plan");
       setPrepPlan(data.data);
-      storage.savePrepPlan(data.data);
+      await storage.savePrepPlan(data.data);
 
       setTimeout(() => {
         planRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -298,9 +300,9 @@ function ParsePageContent() {
     }
   };
 
-  const toggleTask = (dayNum: number, taskIdx: number) => {
+  const toggleTask = async (dayNum: number, taskIdx: number) => {
     if (!prepPlan) return;
-    storage.toggleTaskCompletion(prepPlan.id, dayNum, taskIdx);
+    await storage.toggleTaskCompletion(prepPlan.id, dayNum, taskIdx);
     // Local state update
     setPrepPlan(prev => {
       if (!prev) return prev;
@@ -322,11 +324,10 @@ function ParsePageContent() {
     });
   };
 
-  // Tracker Handlers
-  const handleSaveToTracker = () => {
+  const handleSaveToTracker = async () => {
     if (!result || isSaved) return;
     
-    const existingApp = storage.getApplicationByJDId(result.id);
+    const existingApp = await storage.getApplicationByJDId(result.id);
     if (existingApp) {
       setIsSaved(true);
       return;
@@ -344,7 +345,7 @@ function ParsePageContent() {
       location: result.location
     };
 
-    storage.saveApplication(newApp);
+    await storage.saveApplication(newApp);
     setIsSaved(true);
   };
 
@@ -769,7 +770,6 @@ function ParsePageContent() {
             </div>
 
             <footer className="pt-8 pb-4 text-center">
-              <p className="text-sm text-muted-foreground">All data is saved locally to your browser.</p>
             </footer>
           </div>
         )}

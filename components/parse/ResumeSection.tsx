@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Loader2, ArrowLeft, Copy, Check, Edit2, FileText, Trash2, X, Upload, XCircle } from "lucide-react";
 import { ParsedJD, ResumeAnalysis, TailoredBullet, ResumeVersion } from "@/types";
 import { CardSkeleton, BulletSkeleton } from "@/components/shared/Skeleton";
-import { storage } from "@/lib/storage/localStorage";
+import { storage } from "@/lib/storage/storage";
 import { relativeTime } from "@/lib/utils";
 
 interface ResumeSectionProps {
@@ -64,7 +64,10 @@ export function ResumeSection({
   const canAnalyze = resumeCharCount >= 200 && !isAnalyzing;
 
   useEffect(() => {
-    setVersions(storage.getResumeVersions());
+    const fetchVersions = async () => {
+      setVersions(await storage.getResumeVersions());
+    };
+    fetchVersions();
   }, []);
 
   const handleResumeKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -117,9 +120,9 @@ export function ResumeSection({
     setEditBulletText(bullet.text);
   };
 
-  const saveBullet = (bulletId: string) => {
+  const saveBullet = async (bulletId: string) => {
     if (!resumeAnalysis) return;
-    storage.updateBulletText(resumeAnalysis.id, bulletId, editBulletText);
+    await storage.updateBulletText(resumeAnalysis.id, bulletId, editBulletText);
     
     setResumeAnalysis({
       ...resumeAnalysis,
@@ -139,10 +142,10 @@ export function ResumeSection({
     }
   };
 
-  const handleSaveVersion = () => {
+  const handleSaveVersion = async () => {
     if (!saveFormName.trim() || !resumeText.trim()) return;
-    const newVersion = storage.saveResumeVersion(saveFormName.trim(), resumeText);
-    setVersions(storage.getResumeVersions());
+    const newVersion = await storage.saveResumeVersion(saveFormName.trim(), resumeText);
+    setVersions(await storage.getResumeVersions());
     setActiveVersion(newVersion);
     setShowSaveForm(false);
     setSaveFormName("");
@@ -151,12 +154,12 @@ export function ResumeSection({
     setTimeout(() => setShowSaveConfirmation(""), 2000);
   };
 
-  const handleUpdateVersion = () => {
+  const handleUpdateVersion = async () => {
     if (!activeVersion) return;
-    storage.updateResumeVersion(activeVersion.id, { content: resumeText });
+    await storage.updateResumeVersion(activeVersion.id, { content: resumeText });
     const now = new Date().toISOString();
     setActiveVersion({ ...activeVersion, content: resumeText, updatedAt: now });
-    setVersions(storage.getResumeVersions());
+    setVersions(await storage.getResumeVersions());
     
     setShowSaveConfirmation(`✓ Updated '${activeVersion.name}'`);
     setTimeout(() => setShowSaveConfirmation(""), 2000);
@@ -189,10 +192,10 @@ export function ResumeSection({
     setShowLibraryPanel(false);
   };
 
-  const handleDeleteVersion = (id: string) => {
+  const handleDeleteVersion = async (id: string) => {
     if (!window.confirm("Delete this saved resume?")) return;
-    storage.deleteResumeVersion(id);
-    setVersions(storage.getResumeVersions());
+    await storage.deleteResumeVersion(id);
+    setVersions(await storage.getResumeVersions());
     if (activeVersion?.id === id) {
       setActiveVersion(null);
     }
@@ -203,10 +206,10 @@ export function ResumeSection({
     setEditNameValue(v.name);
   };
 
-  const saveEditedName = (id: string) => {
+  const saveEditedName = async (id: string) => {
     if (editNameValue.trim()) {
-      storage.updateResumeVersion(id, { name: editNameValue.trim() });
-      setVersions(storage.getResumeVersions());
+      await storage.updateResumeVersion(id, { name: editNameValue.trim() });
+      setVersions(await storage.getResumeVersions());
       if (activeVersion?.id === id) {
         setActiveVersion({ ...activeVersion, name: editNameValue.trim() });
       }

@@ -3,33 +3,65 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { storage } from "@/lib/storage/localStorage";
+import { storage } from "@/lib/storage/storage";
+import { createClient } from "@/lib/supabase/client";
+import { LogOut, User as UserIcon } from "lucide-react";
+import type { User } from "@supabase/supabase-js";
 
 export function Header() {
   const pathname = usePathname();
   const [appCount, setAppCount] = useState(0);
+  const [user, setUser] = useState<User | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
-    // Read count on mount
-    const updateCount = () => {
-      const apps = storage.getApplications();
-      setAppCount(apps.length);
+    const supabase = createClient();
+    
+    // Get initial session
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setUser(data.user);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setAppCount(0);
+      return;
+    }
+
+    const updateCount = async () => {
+      try {
+        const apps = await storage.getApplications();
+        setAppCount(apps.length);
+      } catch (err) {
+        console.error(err);
+      }
     };
     
     updateCount();
-
-    // Listen for storage changes if updated in another tab (optional but good)
-    window.addEventListener("storage", updateCount);
     
-    // Poll for changes since localStorage updates in the same tab don't trigger "storage" event
-    // Or we just update on interval or route change
-    const interval = setInterval(updateCount, 2000);
+    // Poll for changes (since we can't easily rely on 'storage' event for DB changes without realtime)
+    const interval = setInterval(updateCount, 5000);
 
     return () => {
-      window.removeEventListener("storage", updateCount);
       clearInterval(interval);
     };
-  }, []);
+  }, [user]);
+
+  const handleSignOut = async () => {
+    // using the API route to clear server cookies as well
+    await fetch("/auth/signout", { method: "POST" });
+    window.location.href = "/";
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#262626] bg-[#0A0A0A]">
@@ -55,6 +87,62 @@ export function Header() {
               </span>
             )}
           </Link>
+
+          <div className="h-6 w-px bg-[#262626] mx-2"></div>
+
+          {user ? (
+            <div className="relative">
+              <button 
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity focus:outline-none"
+              >
+                {user.user_metadata?.avatar_url ? (
+                  <img 
+                    src={user.user_metadata.avatar_url} 
+                    alt="Avatar" 
+                    className="w-8 h-8 rounded-full border border-[#262626]" 
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-violet-500/20 text-violet-500 flex items-center justify-center border border-violet-500/30">
+                    <UserIcon className="w-4 h-4" />
+                  </div>
+                )}
+              </button>
+
+              {dropdownOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setDropdownOpen(false)} 
+                  />
+                  <div className="absolute right-0 mt-2 w-56 rounded-md bg-[#111111] border border-[#262626] shadow-lg py-1 z-50">
+                    <div className="px-4 py-2 border-b border-[#262626]">
+                      <p className="text-sm font-medium text-white truncate">
+                        {user.user_metadata?.full_name || "User"}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {user.email}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-[#262626] flex items-center gap-2 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign out
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <Link 
+              href="/login"
+              className="text-sm font-medium text-white bg-violet-500 hover:bg-violet-600 px-4 py-1.5 rounded-full transition-colors"
+            >
+              Sign in
+            </Link>
+          )}
         </nav>
       </div>
     </header>
