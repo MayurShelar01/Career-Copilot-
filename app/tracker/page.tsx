@@ -1,0 +1,432 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { 
+  DndContext, 
+  DragOverlay, 
+  KeyboardSensor, 
+  PointerSensor, 
+  useSensor, 
+  useSensors, 
+  DragStartEvent,
+  DragEndEvent,
+  defaultDropAnimationSideEffects,
+  useDroppable,
+  closestCenter
+} from "@dnd-kit/core";
+import { 
+  SortableContext, 
+  verticalListSortingStrategy 
+} from "@dnd-kit/sortable";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { ApplicationCard, ApplicationStatus, ParsedJD, ResumeAnalysis, ColdOutreach, PrepPlan } from "@/types";
+import { storage } from "@/lib/storage/localStorage";
+import { Button } from "@/components/ui/button";
+import { Download, ExternalLink, Trash2, AlertTriangle, Bookmark, Inbox, Users, Trophy, XCircle, Check } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+
+const COLUMNS: ApplicationStatus[] = ["Saved", "Applied", "Interviewing", "Offer", "Rejected"];
+
+const COLUMN_COLORS: Record<ApplicationStatus, string> = {
+  Saved: "bg-violet-400",
+  Applied: "bg-blue-400",
+  Interviewing: "bg-amber-400",
+  Offer: "bg-green-400",
+  Rejected: "bg-red-400",
+};
+
+const COLUMN_BORDER_COLORS: Record<ApplicationStatus, string> = {
+  Saved: "border-l-violet-400",
+  Applied: "border-l-blue-400",
+  Interviewing: "border-l-amber-400",
+  Offer: "border-l-green-400",
+  Rejected: "border-l-red-400",
+};
+
+const COLUMN_EMPTY_ICONS: Record<ApplicationStatus, React.ReactNode> = {
+  Saved: <Bookmark className="w-10 h-10 text-muted-foreground/30 mb-2" />,
+  Applied: <Inbox className="w-10 h-10 text-muted-foreground/30 mb-2" />,
+  Interviewing: <Users className="w-10 h-10 text-muted-foreground/30 mb-2" />,
+  Offer: <Trophy className="w-10 h-10 text-muted-foreground/30 mb-2" />,
+  Rejected: <XCircle className="w-10 h-10 text-muted-foreground/30 mb-2" />,
+};
+
+// Sortable Card Component
+function SortableCard({ 
+  app, 
+  expandedId, 
+  toggleExpand, 
+  deleteApp, 
+  updateNotes,
+  linkedData
+}: { 
+  app: ApplicationCard, 
+  expandedId: string | null, 
+  toggleExpand: (id: string) => void,
+  deleteApp: (id: string) => void,
+  updateNotes: (id: string, notes: string) => void,
+  linkedData: { jd?: ParsedJD | null, resume?: ResumeAnalysis | null, outreach?: ColdOutreach | null, plan?: PrepPlan | null }
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: app.id, data: { type: "Application", app } });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  const isExpanded = expandedId === app.id;
+  const dateFormatted = new Date(app.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  
+  const [localNotes, setLocalNotes] = useState(app.notes);
+  
+  useEffect(() => {
+    setLocalNotes(app.notes);
+  }, [app.notes]);
+
+  const handleNotesBlur = () => {
+    if (localNotes !== app.notes) {
+      updateNotes(app.id, localNotes);
+    }
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`bg-card border border-border border-l-2 ${COLUMN_BORDER_COLORS[app.status]} rounded-md p-4 shadow-sm cursor-grab active:cursor-grabbing mb-3 flex flex-col`}
+      onClick={(e) => {
+        // Prevent expanding if clicking on a button or textarea
+        if ((e.target as HTMLElement).closest('button, a, textarea')) return;
+        toggleExpand(app.id);
+      }}
+      {...attributes}
+      {...listeners}
+    >
+      <div className="flex justify-between items-start">
+        <div className="flex-1 overflow-hidden pr-2">
+          <h4 className="font-bold text-lg leading-tight mb-1 truncate" title={app.role}>{app.role}</h4>
+          <p className="text-sm text-muted-foreground truncate">{app.company}</p>
+          <p className="text-xs text-muted-foreground/80 truncate">{app.location}</p>
+        </div>
+      </div>
+      
+      <div className="flex justify-between items-center mt-4">
+        <span className="text-xs text-muted-foreground">{dateFormatted}</span>
+        <div className="flex gap-2">
+          <button onClick={(e) => { e.stopPropagation(); window.location.href = `/parse?jdId=${app.parsedJDId}`; }} className="text-muted-foreground hover:text-foreground">
+            <ExternalLink className="w-4 h-4" />
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); deleteApp(app.id); }} className="text-muted-foreground hover:text-red-400">
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div className="mt-4 pt-4 border-t border-border space-y-4 cursor-default" onClick={e => e.stopPropagation()}>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Notes</label>
+            <Textarea 
+              value={localNotes}
+              onChange={(e) => setLocalNotes(e.target.value)}
+              onBlur={handleNotesBlur}
+              placeholder="Add your notes here..."
+              className="min-h-[80px] text-sm resize-y"
+              onPointerDown={(e) => e.stopPropagation()}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Artifacts</label>
+            <div className="grid grid-cols-1 gap-2">
+              <div className="bg-muted/30 p-3 rounded-md border border-border/50 flex justify-between items-center">
+                <div className="overflow-hidden pr-2">
+                  <p className="text-sm font-medium">JD Summary</p>
+                  <p className="text-xs text-muted-foreground truncate">{linkedData.jd?.summary || "Not available"}</p>
+                </div>
+              </div>
+              
+              <div className="bg-muted/30 p-3 rounded-md border border-border/50 flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-medium">Resume Match</p>
+                  {linkedData.resume ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="text-[10px] py-0">{linkedData.resume.gapAnalysis.matchLabel}</Badge>
+                      <span className="text-xs text-muted-foreground">{linkedData.resume.gapAnalysis.missingKeywords.length} missing kw</span>
+                    </div>
+                  ) : <p className="text-xs text-muted-foreground">Not analyzed yet</p>}
+                </div>
+              </div>
+
+              <div className="bg-muted/30 p-3 rounded-md border border-border/50 flex justify-between items-center">
+                <div className="overflow-hidden pr-2">
+                  <p className="text-sm font-medium">Outreach</p>
+                  {linkedData.outreach ? (
+                    <p className="text-xs text-muted-foreground truncate">{linkedData.outreach.connectionNote.substring(0, 80)}...</p>
+                  ) : <p className="text-xs text-muted-foreground">Not generated yet</p>}
+                </div>
+              </div>
+
+              <div className="bg-muted/30 p-3 rounded-md border border-border/50 flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-medium">Prep Plan</p>
+                  {linkedData.plan ? (
+                    <p className="text-xs text-muted-foreground">
+                      {linkedData.plan.days.reduce((acc, d) => acc + d.completedTaskIndices.length, 0)} / {linkedData.plan.days.reduce((acc, d) => acc + d.tasks.length, 0)} tasks done
+                    </p>
+                  ) : <p className="text-xs text-muted-foreground">Not generated yet</p>}
+                </div>
+              </div>
+            </div>
+            <div className="text-right pt-1">
+              <a href={`/parse?resume=${app.parsedJDId}`} className="text-xs text-violet-500 hover:text-violet-400">View full →</a>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function KanbanColumn({ status, columnApps, children }: { status: ApplicationStatus, columnApps: ApplicationCard[], children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id: status });
+  
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex-1 p-3 min-h-[400px] transition-colors duration-200 ${isOver ? "bg-violet-500/10 ring-1 ring-inset ring-violet-500/50 rounded-b-xl" : ""}`}
+    >
+      <SortableContext 
+        items={columnApps.map(a => a.id)} 
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="h-full w-full">
+          {children}
+        </div>
+      </SortableContext>
+    </div>
+  );
+}
+
+export default function TrackerPage() {
+  const [apps, setApps] = useState<ApplicationCard[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [activeApp, setActiveApp] = useState<ApplicationCard | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [exportFeedback, setExportFeedback] = useState(false);
+
+  // Cached linked data for performance
+  const [linkedDataCache, setLinkedDataCache] = useState<Record<string, { jd: ParsedJD | null, resume: ResumeAnalysis | null, outreach: ColdOutreach | null, plan: PrepPlan | null }>>({});
+
+  useEffect(() => {
+    setApps(storage.getApplications());
+    setMounted(true);
+  }, []);
+
+  const loadLinkedData = (jdId: string) => {
+    if (linkedDataCache[jdId]) return linkedDataCache[jdId];
+    
+    const data = {
+      jd: storage.getParsedJDById(jdId),
+      resume: storage.getResumeAnalysisByJDId(jdId),
+      outreach: storage.getOutreachByJDId(jdId),
+      plan: storage.getPrepPlanByJDId(jdId)
+    };
+    
+    setLinkedDataCache(prev => ({ ...prev, [jdId]: data }));
+    return data;
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor)
+  );
+
+  const toggleExpand = (id: string) => {
+    setExpandedId(prev => prev === id ? null : id);
+  };
+
+  const deleteApp = (id: string) => {
+    if (window.confirm("Delete this application? This action cannot be undone.")) {
+      storage.deleteApplication(id);
+      setApps(storage.getApplications());
+    }
+  };
+
+  const updateNotes = (id: string, notes: string) => {
+    storage.updateApplicationNotes(id, notes);
+    setApps(apps.map(a => a.id === id ? { ...a, notes } : a));
+  };
+
+  const exportData = () => {
+    const data = {
+      exportedAt: new Date().toISOString(),
+      applications: storage.getApplications(),
+      parsedJDs: storage.getParsedJDs(),
+      resumeAnalyses: storage.getResumeAnalyses(),
+      outreaches: storage.getOutreaches(),
+      prepPlans: storage.getPrepPlans(),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `pm-copilot-backup-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    setExportFeedback(true);
+    setTimeout(() => setExportFeedback(false), 2000);
+  };
+
+  const onDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const activeApp = apps.find(a => a.id === active.id);
+    if (activeApp) setActiveApp(activeApp);
+    setExpandedId(null); // Collapse while dragging
+  };
+
+  const onDragOver = () => {
+    // Left empty as we rely on dragEnd to persist between columns in this architecture
+  };
+
+  const onDragEnd = (event: DragEndEvent) => {
+    setActiveApp(null);
+    const { active, over } = event;
+    if (!over) return;
+
+    const cardId = active.id as string;
+    
+    let newStatus: ApplicationStatus | null = null;
+
+    if (COLUMNS.includes(over.id as ApplicationStatus)) {
+      // Dropped directly on a column
+      newStatus = over.id as ApplicationStatus;
+    } else {
+      // Dropped on another card — find which column that card belongs to
+      const targetCard = apps.find(a => a.id === over.id);
+      if (targetCard) newStatus = targetCard.status;
+    }
+
+    if (!newStatus) return;
+
+    const card = apps.find(a => a.id === cardId);
+    if (!card || card.status === newStatus) return;
+
+    // Update state + localStorage
+    const updated = apps.map(a =>
+      a.id === cardId ? { ...a, status: newStatus!, updatedAt: new Date().toISOString() } : a
+    );
+    setApps(updated);
+    storage.updateApplicationStatus(cardId, newStatus);
+  };
+
+  if (!mounted) return null;
+
+  return (
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <div className="flex-1 p-4 md:p-8 max-w-[1600px] mx-auto w-full flex flex-col">
+        
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Application Tracker</h1>
+            <p className="text-muted-foreground">Drag cards between columns to update your status.</p>
+          </div>
+          <Button variant="outline" onClick={exportData} className="shrink-0 border-violet-500/50 hover:bg-violet-500/10">
+            {exportFeedback ? <><Check className="w-4 h-4 mr-2 text-green-500" /> Exported!</> : <><Download className="w-4 h-4 mr-2" /> Export Backup</>}
+          </Button>
+        </div>
+
+        <Alert className="mb-8 border-amber-500/50 bg-amber-500/10 text-amber-500">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Browser Storage</AlertTitle>
+          <AlertDescription>
+            Your data lives in your browser. Clearing your cache will erase it. Use Export to back up your progress regularly.
+          </AlertDescription>
+        </Alert>
+
+        <div className="flex-1 overflow-x-auto pb-4">
+          <div className="flex gap-4 h-full min-h-[500px]">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={onDragStart}
+              onDragOver={onDragOver}
+              onDragEnd={onDragEnd}
+            >
+              {COLUMNS.map(status => {
+                const columnApps = apps.filter(a => a.status === status);
+                
+                return (
+                  <div key={status} className="min-w-[280px] w-[320px] flex-shrink-0 flex flex-col bg-[#111111] rounded-xl border border-border overflow-hidden">
+                    <div className="p-4 border-b border-border bg-[#0A0A0A] flex items-center justify-between sticky top-0 z-10">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${COLUMN_COLORS[status]}`} />
+                        <h3 className="font-bold text-sm tracking-wide">{status}</h3>
+                      </div>
+                      <Badge variant="secondary" className="bg-muted text-xs px-2 py-0.5">{columnApps.length}</Badge>
+                    </div>
+
+                    <KanbanColumn status={status} columnApps={columnApps}>
+                      {columnApps.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+                          {COLUMN_EMPTY_ICONS[status]}
+                          <p className="text-sm font-medium text-muted-foreground/70 mb-1">
+                            {status === "Saved" ? "No saved jobs yet" : "No applications here"}
+                          </p>
+                          <p className="text-xs text-muted-foreground/50">
+                            {status === "Saved" ? "Parse a JD and click 'Save to Tracker'" : "Drag a card here to update status"}
+                          </p>
+                          {status === "Saved" && (
+                            <Button variant="link" className="mt-2 text-violet-500 h-auto p-0 text-xs" onClick={() => window.location.href='/parse'}>
+                              Parse a JD →
+                            </Button>
+                          )}
+                        </div>
+                      ) : (
+                        columnApps.map(app => (
+                          <SortableCard 
+                            key={app.id} 
+                            app={app} 
+                            expandedId={expandedId}
+                            toggleExpand={toggleExpand}
+                            deleteApp={deleteApp}
+                            updateNotes={updateNotes}
+                            linkedData={loadLinkedData(app.parsedJDId)}
+                          />
+                        ))
+                      )}
+                    </KanbanColumn>
+                  </div>
+                );
+              })}
+              
+              <DragOverlay dropAnimation={{
+                sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: "0.4" } } })
+              }}>
+                {activeApp ? (
+                  <div className={`bg-card border border-border border-l-2 ${COLUMN_BORDER_COLORS[activeApp.status]} rounded-md p-4 shadow-xl opacity-90`}>
+                    <h4 className="font-bold text-lg leading-tight mb-1 truncate">{activeApp.role}</h4>
+                    <p className="text-sm text-muted-foreground truncate">{activeApp.company}</p>
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  );
+}
