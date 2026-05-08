@@ -20,13 +20,12 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ApplicationCard, ApplicationStatus, ParsedJD, ResumeAnalysis, ColdOutreach, PrepPlan } from "@/types";
+import { ApplicationCard, ApplicationStatus, ParsedJD, ResumeAnalysis, ColdOutreach, PrepPlan, ApplicationNotes } from "@/types";
 import { storage } from "@/lib/storage/localStorage";
 import { Button } from "@/components/ui/button";
 import { Download, ExternalLink, Trash2, AlertTriangle, Bookmark, Inbox, Users, Trophy, XCircle, Check } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 
 const COLUMNS: ApplicationStatus[] = ["Saved", "Applied", "Interviewing", "Offer", "Rejected"];
 
@@ -67,7 +66,7 @@ function SortableCard({
   expandedId: string | null, 
   toggleExpand: (id: string) => void,
   deleteApp: (id: string) => void,
-  updateNotes: (id: string, notes: string) => void,
+  updateNotes: (id: string, notes: ApplicationNotes) => void,
   linkedData: { jd?: ParsedJD | null, resume?: ResumeAnalysis | null, outreach?: ColdOutreach | null, plan?: PrepPlan | null }
 }) {
   const {
@@ -88,17 +87,37 @@ function SortableCard({
   const isExpanded = expandedId === app.id;
   const dateFormatted = new Date(app.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   
-  const [localNotes, setLocalNotes] = useState(app.notes);
+  const [localNotes, setLocalNotes] = useState<ApplicationNotes>(app.notes);
   
   useEffect(() => {
     setLocalNotes(app.notes);
   }, [app.notes]);
 
-  const handleNotesBlur = () => {
-    if (localNotes !== app.notes) {
-      updateNotes(app.id, localNotes);
-    }
+  const handleFieldBlur = () => {
+    updateNotes(app.id, localNotes);
   };
+
+  const setNoteField = (field: keyof ApplicationNotes, value: string) => {
+    setLocalNotes(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Textarea style shared across all note fields
+  const textareaClass =
+    "w-full rounded-md p-3 text-sm text-[#FAFAFA] bg-[#0A0A0A] border border-[#262626] placeholder:text-[#52525B] resize-none focus:outline-none focus:border-[#A78BFA] transition-colors duration-150";
+
+  const NOTE_FIELDS: {
+    key: keyof ApplicationNotes;
+    label: string;
+    placeholder: string;
+    rows: number;
+  }[] = [
+    { key: "recruiterName",      label: "Recruiter name",      placeholder: "e.g., Sarah Chen",                                                                rows: 2 },
+    { key: "interviewDate",      label: "Interview date",      placeholder: "e.g., Nov 14, 2pm PT",                                                            rows: 2 },
+    { key: "hiringManager",      label: "Hiring manager",      placeholder: "e.g., Alex Kim, Director of Product",                                              rows: 2 },
+    { key: "keyThemes",          label: "Key themes from JD",  placeholder: "What is this role really about? Growth? Platform? 0→1?",                           rows: 4 },
+    { key: "questionsToAsk",     label: "Questions to ask",    placeholder: "What does success look like in 90 days? Biggest challenge facing the team?",       rows: 4 },
+    { key: "postInterviewNotes", label: "Post-interview notes",placeholder: "What went well, what to follow up on, vibe check",                                 rows: 4 },
+  ];
 
   return (
     <div
@@ -135,16 +154,24 @@ function SortableCard({
 
       {isExpanded && (
         <div className="mt-4 pt-4 border-t border-border space-y-4 cursor-default" onClick={e => e.stopPropagation()}>
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Notes</label>
-            <Textarea 
-              value={localNotes}
-              onChange={(e) => setLocalNotes(e.target.value)}
-              onBlur={handleNotesBlur}
-              placeholder="Add your notes here..."
-              className="min-h-[80px] text-sm resize-y"
-              onPointerDown={(e) => e.stopPropagation()}
-            />
+
+          {/* ── Structured Notes ── */}
+          <div className="border-t border-[#262626] pt-4 mt-4">
+            <p className="text-sm font-semibold text-zinc-200 mb-3">Notes</p>
+            {NOTE_FIELDS.map((field) => (
+              <div key={field.key} className="mb-3">
+                <label className="block text-xs font-medium text-zinc-400 mb-1">{field.label}</label>
+                <textarea
+                  value={localNotes[field.key]}
+                  onChange={(e) => setNoteField(field.key, e.target.value)}
+                  onBlur={handleFieldBlur}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  placeholder={field.placeholder}
+                  rows={field.rows}
+                  className={textareaClass}
+                />
+              </div>
+            ))}
           </div>
 
           <div className="space-y-2">
@@ -264,7 +291,7 @@ export default function TrackerPage() {
     }
   };
 
-  const updateNotes = (id: string, notes: string) => {
+  const updateNotes = (id: string, notes: ApplicationNotes) => {
     storage.updateApplicationNotes(id, notes);
     setApps(apps.map(a => a.id === id ? { ...a, notes } : a));
   };

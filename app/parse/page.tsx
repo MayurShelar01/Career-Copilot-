@@ -7,11 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, CheckCircle2, ArrowLeft, Loader2, Copy, Check, Edit2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ArrowLeft, Loader2, Copy, Check } from "lucide-react";
 import { storage } from "@/lib/storage/localStorage";
-import { ParsedJD, ResumeAnalysis, TailoredBullet, OutreachTone, ColdOutreach, PrepPlan, ApplicationCard } from "@/types";
-import { CardSkeleton, BulletSkeleton, PlanDaySkeleton } from "@/components/shared/Skeleton";
+import { ParsedJD, ResumeAnalysis, OutreachTone, ColdOutreach, PrepPlan, ApplicationCard } from "@/types";
+import { CardSkeleton, PlanDaySkeleton } from "@/components/shared/Skeleton";
 import dynamic from "next/dynamic";
+import { ResumeSection } from "@/components/parse/ResumeSection";
 
 function ParsePageContent() {
   const searchParams = useSearchParams();
@@ -30,8 +31,6 @@ function ParsePageContent() {
   const [analyzing, setAnalyzing] = useState(false);
   const [resumeAnalysis, setResumeAnalysis] = useState<ResumeAnalysis | null>(null);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  const [editingBulletId, setEditingBulletId] = useState<string | null>(null);
-  const [editBulletText, setEditBulletText] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const analysisRef = useRef<HTMLDivElement>(null);
 
@@ -154,8 +153,6 @@ function ParsePageContent() {
     setResumeText("");
     setResumeAnalysis(null);
     setAnalyzeError(null);
-    setEditingBulletId(null);
-    setEditBulletText("");
     setUserBackground("");
     setOutreachTone("Professional");
     setOutreach(null);
@@ -190,13 +187,6 @@ function ParsePageContent() {
       setAnalyzeError(message);
     } finally {
       setAnalyzing(false);
-    }
-  };
-
-  const handleResumeKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-      e.preventDefault();
-      handleAnalyze();
     }
   };
 
@@ -308,7 +298,7 @@ function ParsePageContent() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       status: "Saved",
-      notes: "",
+      notes: { recruiterName: "", interviewDate: "", hiringManager: "", keyThemes: "", questionsToAsk: "", postInterviewNotes: "" },
       role: result.role,
       company: result.company,
       location: result.location
@@ -323,33 +313,6 @@ function ParsePageContent() {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const startEditing = (bullet: TailoredBullet) => {
-    setEditingBulletId(bullet.id);
-    setEditBulletText(bullet.text);
-  };
-
-  const saveBullet = (bulletId: string) => {
-    if (!resumeAnalysis) return;
-    storage.updateBulletText(resumeAnalysis.id, bulletId, editBulletText);
-    
-    setResumeAnalysis({
-      ...resumeAnalysis,
-      bullets: resumeAnalysis.bullets.map(b => 
-        b.id === bulletId ? { ...b, text: editBulletText } : b
-      )
-    });
-    setEditingBulletId(null);
-  };
-
-  const getMatchStyles = (label: string) => {
-    switch (label) {
-      case "Strong": return "text-green-400 bg-green-500/10 border-green-500/30";
-      case "Partial": return "text-amber-400 bg-amber-500/10 border-amber-500/30";
-      case "Weak": return "text-red-400 bg-red-500/10 border-red-500/30";
-      default: return "";
-    }
   };
 
   // Calculate Plan Progress
@@ -474,88 +437,20 @@ function ParsePageContent() {
             <div className="h-px bg-border w-full" />
 
             {/* --- RESUME SECTION --- */}
-            {!resumeAnalysis ? (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-bold tracking-tight">Analyze Your Resume Against This JD</h2>
-                  <p className="text-muted-foreground">Paste your resume below. We&apos;ll show your match strength, missing keywords, and generate tailored bullets you can copy-paste.</p>
-                </div>
-                <div className="space-y-4">
-                  <Textarea
-                    value={resumeText}
-                    onChange={(e) => setResumeText(e.target.value)}
-                    onKeyDown={handleResumeKeyDown}
-                    placeholder="Paste your full resume text here..."
-                    className="min-h-[300px] resize-y bg-card border-border focus-visible:ring-primary text-base p-4"
-                  />
-                  <div className="flex justify-between items-center">
-                    <span className={`text-sm ${resumeCharCount >= 200 ? "text-primary" : "text-muted-foreground"}`}>{resumeCharCount} / 200 chars</span>
-                    <Button onClick={handleAnalyze} disabled={!canAnalyze} className={`transition-all duration-300 ${analyzing ? "animate-pulse" : ""}`}>
-                      {analyzing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analyzing...</> : "Analyze Resume"}
-                    </Button>
-                  </div>
-                  
-                  {analyzing && (
-                    <div className="space-y-6 mt-6">
-                      <CardSkeleton />
-                      <div className="grid grid-cols-1 gap-4">
-                        <BulletSkeleton />
-                        <BulletSkeleton />
-                        <BulletSkeleton />
-                      </div>
-                    </div>
-                  )}
-
-                  {analyzeError && (
-                    <Alert variant="destructive" className="mt-4 border-destructive/50 bg-destructive/10 text-destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{analyzeError}</AlertDescription></Alert>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div ref={analysisRef} className="space-y-10 animate-in fade-in duration-500">
-                <div className="space-y-2"><h2 className="text-2xl font-bold tracking-tight">Resume Gap Analysis</h2><p className="text-muted-foreground">Review your match and tailored bullets below.</p></div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card className="col-span-1 md:col-span-2 bg-card border-border flex flex-col items-center justify-center p-8 text-center">
-                    <Badge variant="outline" className={`text-lg px-6 py-2 border-2 ${getMatchStyles(resumeAnalysis.gapAnalysis.matchLabel)}`}>{resumeAnalysis.gapAnalysis.matchLabel} Match</Badge>
-                    <p className="text-lg text-muted-foreground mt-4 max-w-2xl">{resumeAnalysis.gapAnalysis.matchReasoning}</p>
-                  </Card>
-                  <Card className="bg-card border-border"><CardHeader><CardTitle>Missing Keywords</CardTitle></CardHeader><CardContent className="p-6 pt-0 flex flex-wrap gap-2">
-                    {resumeAnalysis.gapAnalysis.missingKeywords.length > 0 ? resumeAnalysis.gapAnalysis.missingKeywords.map((kw, i) => (<Badge key={i} variant="outline" className="border-amber-500/50 text-amber-500 bg-amber-500/10">{kw}</Badge>)) : (<p className="text-muted-foreground">None! Your resume covers all key terms.</p>)}
-                  </CardContent></Card>
-                  <Card className="bg-card border-border"><CardHeader><CardTitle>Top 3 Improvements</CardTitle></CardHeader><CardContent className="p-6 pt-0"><ol className="space-y-3">
-                    {resumeAnalysis.gapAnalysis.topImprovements.map((imp, i) => (<li key={i} className="flex items-start"><span className="text-primary font-bold mr-3">{i + 1}.</span><span>{imp}</span></li>))}
-                  </ol></CardContent></Card>
-                </div>
-                <div className="space-y-4">
-                  <div className="space-y-1"><h3 className="text-xl font-bold tracking-tight">Tailored Resume Bullets</h3><p className="text-sm text-muted-foreground">Generated from your experience, optimized for this JD. Click to copy.</p></div>
-                  <div className="grid grid-cols-1 gap-4">
-                    {resumeAnalysis.bullets.map((bullet) => (
-                      <Card key={bullet.id} className="bg-card border-border overflow-hidden">
-                        <CardContent className="p-6">
-                          {editingBulletId === bullet.id ? (
-                            <div className="space-y-4">
-                              <Textarea value={editBulletText} onChange={(e) => setEditBulletText(e.target.value)} className="min-h-[100px]"/>
-                              <div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setEditingBulletId(null)}>Cancel</Button><Button onClick={() => saveBullet(bullet.id)}>Save</Button></div>
-                            </div>
-                          ) : (
-                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                              <div className="space-y-2 flex-1"><p className="text-lg leading-relaxed">{bullet.text}</p><p className="text-sm text-muted-foreground">Based on: {bullet.basedOn}</p></div>
-                              <div className="flex items-center gap-2 md:self-start">
-                                <Button variant="ghost" size="icon" onClick={() => startEditing(bullet)} title="Edit bullet"><Edit2 className="h-4 w-4" /></Button>
-                                <Button variant="ghost" className="min-w-[100px]" onClick={() => copyText(bullet.id, bullet.text)}>
-                                  {copiedId === bullet.id ? <><Check className="h-4 w-4 mr-2 text-green-500" /> Copied!</> : <><Copy className="h-4 w-4 mr-2" /> Copy</>}
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-                <div className="pt-4 flex justify-center"><Button variant="outline" onClick={() => setResumeAnalysis(null)}><ArrowLeft className="mr-2 h-4 w-4" /> Edit Resume</Button></div>
-              </div>
-            )}
+            <div ref={analysisRef}>
+              <ResumeSection 
+                parsedJD={result}
+                resumeText={resumeText}
+                onResumeTextChange={setResumeText}
+                onAnalyze={handleAnalyze}
+                isAnalyzing={analyzing}
+                resumeAnalysis={resumeAnalysis}
+                analyzeError={analyzeError}
+                setResumeAnalysis={setResumeAnalysis}
+                copiedId={copiedId}
+                copyText={copyText}
+              />
+            </div>
 
             <div className="h-px bg-border w-full" />
 

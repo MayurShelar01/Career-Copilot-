@@ -14,6 +14,14 @@ export interface ParsedJD {
   summary: string;               // 1-2 sentence TL;DR of the role
 }
 
+export interface ResumeVersion {
+  id: string;              // crypto.randomUUID()
+  name: string;            // user-provided label, e.g. "PM - Fintech focus"
+  content: string;         // full resume text
+  createdAt: string;       // ISO timestamp
+  updatedAt: string;       // ISO timestamp
+}
+
 export type MatchLabel = "Strong" | "Partial" | "Weak";
 
 export interface ResumeGapAnalysis {
@@ -71,13 +79,22 @@ export type ApplicationStatus =
   | "Offer"
   | "Rejected";
 
+export interface ApplicationNotes {
+  recruiterName: string;
+  interviewDate: string;
+  hiringManager: string;
+  keyThemes: string;
+  questionsToAsk: string;
+  postInterviewNotes: string;
+}
+
 export interface ApplicationCard {
   id: string;                        // uuid
   parsedJDId: string;                // links to ParsedJD
   createdAt: string;
   updatedAt: string;
   status: ApplicationStatus;
-  notes: string;                     // user-editable free text notes
+  notes: ApplicationNotes;            // structured templated notes (6 sections)
   // Denormalized for quick display (don't re-fetch from parsedJDs):
   role: string;
   company: string;

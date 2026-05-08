@@ -33,12 +33,89 @@ const KEYS = {
   OUTREACHES: "pmcc:outreaches",
   PREP_PLANS: "pmcc:prep-plans",
   APPLICATIONS: "pmcc:applications",
+  RESUME_VERSIONS: "pmcc:resume-versions",
   SESSION_CLEARED: "pmcc:session-cleared",
 } as const;
 
-import type { ParsedJD, ResumeAnalysis, ColdOutreach, PrepPlan, ApplicationCard, ApplicationStatus } from "@/types";
+import type { ParsedJD, ResumeAnalysis, ColdOutreach, PrepPlan, ApplicationCard, ApplicationStatus, ApplicationNotes, ResumeVersion } from "@/types";
+
+/** Empty default for new ApplicationNotes — all 6 fields as empty strings */
+const EMPTY_NOTES: ApplicationNotes = {
+  recruiterName: "",
+  interviewDate: "",
+  hiringManager: "",
+  keyThemes: "",
+  questionsToAsk: "",
+  postInterviewNotes: "",
+};
+
+/**
+ * Migrates a card whose notes field may still be the old V1 string format.
+ * - If notes is a string: converts it to ApplicationNotes, preserving the
+ *   old freeform text in the postInterviewNotes field.
+ * - If notes is already an object: returns the card unchanged.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function migrateNotesIfNeeded(card: any): ApplicationCard {
+  if (typeof card.notes === "string") {
+    return {
+      ...card,
+      notes: {
+        ...EMPTY_NOTES,
+        postInterviewNotes: card.notes || "",
+      } satisfies ApplicationNotes,
+    };
+  }
+  return card as ApplicationCard;
+}
 
 export const storage = {
+  // Resume Versions
+  getResumeVersions(): ResumeVersion[] {
+    const versions = getItem<ResumeVersion[]>(KEYS.RESUME_VERSIONS) || [];
+    return versions.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  },
+  getResumeVersionById(id: string): ResumeVersion | null {
+    const existing = this.getResumeVersions();
+    return existing.find((v) => v.id === id) || null;
+  },
+  saveResumeVersion(name: string, content: string): ResumeVersion {
+    const existing = this.getResumeVersions();
+    const now = new Date().toISOString();
+    const newVersion: ResumeVersion = {
+      id: crypto.randomUUID(),
+      name,
+      content,
+      createdAt: now,
+      updatedAt: now,
+    };
+    setItem(KEYS.RESUME_VERSIONS, [newVersion, ...existing]);
+    return newVersion;
+  },
+  updateResumeVersion(id: string, updates: { name?: string; content?: string }): void {
+    const existing = this.getResumeVersions();
+    let updated = false;
+    const newList = existing.map((v) => {
+      if (v.id === id) {
+        updated = true;
+        return {
+          ...v,
+          ...updates,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      return v;
+    });
+    if (updated) {
+      setItem(KEYS.RESUME_VERSIONS, newList);
+    }
+  },
+  deleteResumeVersion(id: string): void {
+    const existing = this.getResumeVersions();
+    const filtered = existing.filter((v) => v.id !== id);
+    setItem(KEYS.RESUME_VERSIONS, filtered);
+  },
+
   getParsedJDs(): ParsedJD[] {
     return getItem<ParsedJD[]>(KEYS.PARSED_JDS) || [];
   },
@@ -140,12 +217,21 @@ export const storage = {
 
   // Applications
   getApplications(): ApplicationCard[] {
-    return getItem<ApplicationCard[]>(KEYS.APPLICATIONS) || [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw = getItem<any[]>(KEYS.APPLICATIONS) || [];
+    return raw.map(migrateNotesIfNeeded);
   },
   saveApplication(app: ApplicationCard): void {
+    // Ensure the new card always has a full ApplicationNotes object
+    const normalized: ApplicationCard = {
+      ...app,
+      notes: typeof app.notes === "object" && app.notes !== null
+        ? app.notes
+        : EMPTY_NOTES,
+    };
     const existing = this.getApplications();
-    const filtered = existing.filter(a => a.id !== app.id);
-    setItem(KEYS.APPLICATIONS, [app, ...filtered]);
+    const filtered = existing.filter(a => a.id !== normalized.id);
+    setItem(KEYS.APPLICATIONS, [normalized, ...filtered]);
   },
   updateApplicationStatus(id: string, status: ApplicationStatus): void {
     const existing = this.getApplications();
@@ -154,7 +240,7 @@ export const storage = {
     );
     setItem(KEYS.APPLICATIONS, updated);
   },
-  updateApplicationNotes(id: string, notes: string): void {
+  updateApplicationNotes(id: string, notes: ApplicationNotes): void {
     const existing = this.getApplications();
     const updated = existing.map(app => 
       app.id === id ? { ...app, notes, updatedAt: new Date().toISOString() } : app
