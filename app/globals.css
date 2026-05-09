@@ -44,3 +44,85 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Ambient background glow — apply to <body> or root layout */
+.bg-ambient {
+  background-color: #0A0A0A;
+  background-image:
+    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(167, 139, 250, 0.15), transparent 70%),
+    radial-gradient(ellipse 40% 40% at 80% 80%, rgba(139, 92, 246, 0.08), transparent 70%);
+  background-attachment: fixed;
+}
+
+/* Glassmorphism surface */
+.glass {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Glowing primary button */
+.btn-glow {
+  background: linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 8px 24px -4px rgba(139, 92, 246, 0.45),
+    0 0 48px -8px rgba(167, 139, 250, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-glow:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12) inset,
+    0 12px 32px -4px rgba(139, 92, 246, 0.55),
+    0 0 64px -8px rgba(167, 139, 250, 0.4);
+}
+
+/* Gradient text for hero */
+.text-gradient-violet {
+  background: linear-gradient(135deg, #A78BFA 0%, #C4B5FD 50%, #EC4899 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 24px rgba(167, 139, 250, 0.35));
+}
+
+/* Card with hover lift + violet glow */
+.card-interactive {
+  background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+  border: 1px solid #262626;
+  border-radius: 16px;
+  transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+}
+.card-interactive:hover {
+  border-color: rgba(167, 139, 250, 0.4);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px -12px rgba(139, 92, 246, 0.25);
+}
+
+/* Frosted header */
+.header-frosted {
+  background: rgba(10, 10, 10, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Subtle grid texture (optional decorative) */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black, transparent 70%);
+}
+
+/* Focus ring for inputs */
+.input-focus-glow:focus,
+.input-focus-glow:focus-within {
+  border-color: #A78BFA !important;
+  box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.12);
+  outline: none;
+}

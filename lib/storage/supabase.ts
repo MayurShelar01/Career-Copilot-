@@ -16,6 +16,7 @@ import type {
   ApplicationStatus,
   ApplicationNotes,
   ResumeVersion,
+  ApplicationStats,
 } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -529,5 +530,132 @@ export const storage = {
       .maybeSingle();
     if (error || !data) return null;
     return rowToApp(data);
+  },
+
+  // ── Analytics ──────────────────────────────────────────────────────────────
+
+  async getApplicationStats(): Promise<ApplicationStats> {
+    const supabase = createClient();
+    
+    // RLS automatically scopes these queries to the authenticated user
+    const [appsRes, analysesRes] = await Promise.all([
+      supabase.from("applications").select("*").order("created_at", { ascending: false }),
+      supabase.from("resume_analyses").select("parsed_jd_id, match_label")
+    ]);
+    
+    if (appsRes.error) throw appsRes.error;
+    if (analysesRes.error) throw analysesRes.error;
+    
+    const apps = appsRes.data ?? [];
+    const analyses = analysesRes.data ?? [];
+    
+    const matchMap = new Map<string, string>();
+    for (const an of analyses) {
+      if (an.parsed_jd_id && an.match_label) {
+        matchMap.set(an.parsed_jd_id, an.match_label);
+      }
+    }
+
+    const totalApplications = apps.length;
+    const activePipeline = apps.filter(a => a.status !== "Rejected").length;
+    
+    const notSavedApps = apps.filter(a => a.status !== "Saved");
+    const respondedApps = notSavedApps.filter(a => a.status === "Interviewing" || a.status === "Offer");
+    const responseRate = notSavedApps.length > 0 
+      ? Math.round((respondedApps.length / notSavedApps.length) * 1000) / 10 
+      : 0;
+
+    let daysSinceLastApplication: number | null = null;
+    if (apps.length > 0 && apps[0].created_at) {
+      const mostRecent = new Date(apps[0].created_at).getTime();
+      const now = Date.now();
+      daysSinceLastApplication = Math.max(0, Math.floor((now - mostRecent) / (1000 * 60 * 60 * 24)));
+    }
+
+    const funnelData = { saved: 0, applied: 0, interviewing: 0, offer: 0, rejected: 0 };
+    for (const a of apps) {
+      const status = (a.status || "Saved").toLowerCase() as keyof typeof funnelData;
+      if (funnelData[status] !== undefined) funnelData[status]++;
+    }
+
+    const compMap = new Map<string, number>();
+    for (const a of apps) {
+      if (a.company) {
+        compMap.set(a.company, (compMap.get(a.company) || 0) + 1);
+      }
+    }
+    const topCompanies = Array.from(compMap.entries())
+      .map(([company, count]) => ({ company, count }))
+      .sort((a, b) => b.count - a.count || a.company.localeCompare(b.company))
+      .slice(0, 5);
+
+    const matchCounts = { Strong: 0, Partial: 0, Weak: 0 };
+    for (const a of apps) {
+      if (a.parsed_jd_id) {
+        const label = matchMap.get(a.parsed_jd_id);
+        if (label === "Strong" || label === "Partial" || label === "Weak") {
+          matchCounts[label]++;
+        }
+      }
+    }
+    const matchLabelDistribution = [
+      { label: "Strong", count: matchCounts.Strong },
+      { label: "Partial", count: matchCounts.Partial },
+      { label: "Weak", count: matchCounts.Weak }
+    ].filter(x => x.count > 0);
+
+    const stageDaysMap = new Map<string, { totalDays: number; count: number }>();
+    for (const a of apps) {
+      if (a.status === "Saved" || !a.status) continue;
+      const created = new Date(a.created_at).getTime();
+      const updated = new Date(a.updated_at || a.created_at).getTime();
+      const days = Math.max(0, (updated - created) / (1000 * 60 * 60 * 24));
+      
+      const current = stageDaysMap.get(a.status) || { totalDays: 0, count: 0 };
+      stageDaysMap.set(a.status, { totalDays: current.totalDays + days, count: current.count + 1 });
+    }
+    const avgDaysPerStage = Array.from(stageDaysMap.entries())
+      .filter(([, data]) => data.count >= 2)
+      .map(([stage, data]) => ({ stage, days: Math.round(data.totalDays / data.count) }));
+
+    const applicationsPerWeek: { weekStart: string; count: number }[] = [];
+    const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+    
+    const nowObj = new Date();
+    const dayOfWeek = nowObj.getUTCDay(); // 0 is Sunday
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const currentMondayUTC = new Date(Date.UTC(nowObj.getUTCFullYear(), nowObj.getUTCMonth(), nowObj.getUTCDate() + diffToMonday));
+
+    for (let i = 11; i >= 0; i--) {
+      const weekStart = new Date(currentMondayUTC.getTime() - i * msPerWeek);
+      applicationsPerWeek.push({
+        weekStart: weekStart.toISOString().split("T")[0],
+        count: 0
+      });
+    }
+
+    for (const a of apps) {
+      if (!a.created_at) continue;
+      const appTime = new Date(a.created_at).getTime();
+      for (let i = applicationsPerWeek.length - 1; i >= 0; i--) {
+        const weekStartMs = new Date(applicationsPerWeek[i].weekStart).getTime();
+        if (appTime >= weekStartMs && appTime < weekStartMs + msPerWeek) {
+          applicationsPerWeek[i].count++;
+          break;
+        }
+      }
+    }
+
+    return {
+      totalApplications,
+      activePipeline,
+      responseRate,
+      daysSinceLastApplication,
+      applicationsPerWeek,
+      funnelData,
+      avgDaysPerStage,
+      topCompanies,
+      matchLabelDistribution
+    };
   },
 };

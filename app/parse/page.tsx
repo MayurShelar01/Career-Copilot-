@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, CheckCircle2, ArrowLeft, Loader2, Copy, Check, Download, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ArrowLeft, Loader2, Copy, Check, Download, X, Home, ChevronRight, Lightbulb, Sparkles, Clock, ArrowRight, MessageSquare, CalendarDays, Briefcase, Plus, Tags, ShieldCheck, Bookmark } from "lucide-react";
+import { motion } from "framer-motion";
 import { storage } from "@/lib/storage/storage";
 import { ParsedJD, ResumeAnalysis, OutreachTone, ColdOutreach, PrepPlan, ApplicationCard } from "@/types";
 import { CardSkeleton, PlanDaySkeleton } from "@/components/shared/Skeleton";
@@ -58,6 +59,10 @@ function ParsePageContent() {
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<{ source: string; charCount: number } | null>(null);
+
+  // Stubs for Sidebar
+  const recentJDs: any[] = [];
+  const loadExampleJD = () => {};
 
   function isValidURL(str: string): boolean {
     if (!str) return false;
@@ -368,36 +373,46 @@ function ParsePageContent() {
 
   return (
     <main className="min-h-screen bg-background text-foreground p-4 md:p-8">
-      <div className="max-w-5xl mx-auto space-y-8">
+      <div className="max-w-7xl mx-auto px-6 py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
+          {/* LEFT: main content */}
+          <div className="space-y-8">
 
         {/* STAGE 1: JD INPUT */}
         <div className={`transition-opacity duration-500 ${result ? "hidden opacity-0" : "opacity-100"}`}>
-          <div className="space-y-2 mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Parse a Job Description</h1>
-            <p className="text-muted-foreground">
+          <div className="mb-8">
+            <div className="flex items-center gap-2 text-sm text-zinc-500 mb-3">
+              <Home className="w-3.5 h-3.5" />
+              <ChevronRight className="w-3.5 h-3.5" />
+              <span>Parse JD</span>
+            </div>
+            <h1 className="text-4xl font-bold text-white tracking-tight mb-2">
+              Parse a Job Description
+            </h1>
+            <p className="text-zinc-400">
               Paste any JD below. We&apos;ll extract the role, requirements, keywords, and red flags.
             </p>
           </div>
 
           <div className="space-y-4">
             {/* Mode toggle */}
-            <div className="flex items-center gap-2 mb-3">
+            <div className="inline-flex p-1 rounded-xl glass border border-white/[0.06] mb-6">
               <button
                 onClick={() => setJdInputMode("paste")}
-                className={`px-4 py-1.5 text-sm rounded-md border transition-colors ${
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition ${
                   jdInputMode === "paste"
-                    ? "bg-[#A78BFA]/10 text-[#A78BFA] border-[#A78BFA]/30"
-                    : "text-[#A1A1AA] border-[#262626] hover:bg-[#262626]/30"
+                    ? "bg-violet-500/20 text-violet-200 shadow-[0_0_0_1px_rgba(167,139,250,0.3)]"
+                    : "text-zinc-400 hover:text-white"
                 }`}
               >
                 Paste Text
               </button>
               <button
                 onClick={() => setJdInputMode("url")}
-                className={`px-4 py-1.5 text-sm rounded-md border transition-colors ${
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition ${
                   jdInputMode === "url"
-                    ? "bg-[#A78BFA]/10 text-[#A78BFA] border-[#A78BFA]/30"
-                    : "text-[#A1A1AA] border-[#262626] hover:bg-[#262626]/30"
+                    ? "bg-violet-500/20 text-violet-200 shadow-[0_0_0_1px_rgba(167,139,250,0.3)]"
+                    : "text-zinc-400 hover:text-white"
                 }`}
               >
                 Import from URL
@@ -419,25 +434,37 @@ function ParsePageContent() {
             {/* PASTE MODE */}
             {jdInputMode === "paste" && (
               <>
-                <Textarea
-                  value={jdText}
-                  onChange={(e) => setJdText(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Paste the full job description here..."
-                  className="min-h-[300px] resize-y bg-card border-border focus-visible:ring-primary text-base p-4"
-                />
+                <div className="rounded-2xl glass input-focus-glow border border-white/[0.08] overflow-hidden transition">
+                  <textarea
+                    value={jdText}
+                    onChange={(e) => setJdText(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Paste the full job description here..."
+                    className="w-full h-72 bg-transparent p-5 text-zinc-200 placeholder:text-zinc-600 resize-none focus:outline-none text-sm leading-relaxed"
+                  />
+                </div>
 
-                <div className="flex justify-between items-center">
-                  <span className={`text-sm ${charCount >= 100 ? "text-primary" : "text-muted-foreground"}`}>
-                    {charCount} / 100 chars
-                  </span>
-                  <Button onClick={handleParse} disabled={!canSubmit} className={`transition-all duration-300 ${loading ? "animate-pulse" : ""}`}>
-                    {loading ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analyzing...</>
-                    ) : (
-                      "Parse JD"
-                    )}
-                  </Button>
+                <div className="mt-5 flex items-center justify-between gap-4">
+                  <div className="flex-1 max-w-md">
+                    <div className="flex items-center justify-between text-xs text-zinc-500 mb-1.5">
+                      <span>{charCount} / 100 chars minimum</span>
+                      {charCount >= 100 && <span className="text-green-400">✓ Ready</span>}
+                    </div>
+                    <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-300"
+                        style={{ width: `${Math.min((charCount / 100) * 100, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleParse}
+                    disabled={!canSubmit}
+                    className="btn-glow px-6 py-3 rounded-full text-white font-medium inline-flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                  >
+                    {loading ? 'Parsing...' : 'Parse JD'}
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
                 </div>
 
                 {loading && (
@@ -506,60 +533,128 @@ function ParsePageContent() {
 
         {/* STAGE 2: RESULTS */}
         {result && (
-          <div ref={resultsRef} className="transition-opacity duration-500 opacity-100 space-y-16">
+          <div ref={resultsRef} className="transition-opacity duration-500 opacity-100 space-y-8">
             
             {/* --- JD RESULTS SECTION --- */}
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <Button variant="ghost" onClick={handleReset} className="text-muted-foreground hover:text-foreground">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
+            <div className="space-y-5">
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#262626]">
+                <button onClick={handleReset} className="text-sm text-[#A1A1AA] hover:text-white transition-colors inline-flex items-center gap-2">
+                  <ArrowLeft className="w-4 h-4" />
                   Parse another JD
-                </Button>
-                <span className="text-sm text-muted-foreground flex items-center">
-                  <CheckCircle2 className="mr-1 h-3 w-3" />
-                  Saved to your tracker
-                </span>
+                </button>
+                {isSaved ? (
+                  <span className="text-xs text-green-400 flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5" />
+                    Saved to your tracker
+                  </span>
+                ) : (
+                  <button onClick={handleSaveToTracker} className="text-xs text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1.5 font-medium">
+                    <Bookmark className="w-3.5 h-3.5" />
+                    Save to Tracker
+                  </button>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="col-span-1 md:col-span-2 bg-card border-border">
-                  <CardContent className="p-6">
-                    {result.role === "Unknown" && (
-                      <Alert className="mb-6 border-amber-500/50 bg-amber-500/10 text-amber-500">
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertTitle>Warning</AlertTitle>
-                        <AlertDescription>This doesn&apos;t look like a typical job description. Results may be inaccurate.</AlertDescription>
-                      </Alert>
-                    )}
-                    <h2 className="text-3xl font-bold mb-2">{result.role}</h2>
-                    <p className="text-lg text-muted-foreground mb-4">
-                      {result.company === "Unknown" ? <span className="italic">Company not specified</span> : result.company}
-                      {" • "}
-                      {result.location === "Unknown" ? <span className="italic">Location not specified</span> : result.location}
-                    </p>
-                    <p className="text-lg">{result.summary}</p>
-                  </CardContent>
-                </Card>
+              <div className="bg-[#111111]/80 backdrop-blur-xl border border-[#262626] rounded-xl p-7">
+                {result.role === "Unknown" && (
+                  <Alert className="mb-6 border-amber-500/50 bg-amber-500/10 text-amber-500">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Warning</AlertTitle>
+                    <AlertDescription>This doesn&apos;t look like a typical job description. Results may be inaccurate.</AlertDescription>
+                  </Alert>
+                )}
+                <div className="w-10 h-10 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center mb-4">
+                  <Briefcase className="w-5 h-5 text-violet-300" />
+                </div>
+                <h1 className="text-3xl font-semibold text-white tracking-tight">{result.role}</h1>
+                <div className="flex items-center gap-2 text-sm text-[#A1A1AA] mt-2">
+                  <span className="text-white font-medium">{result.company === "Unknown" ? <span className="italic">Company not specified</span> : result.company}</span>
+                  <span className="text-[#404040]">•</span>
+                  <span>{result.location === "Unknown" ? <span className="italic">Location not specified</span> : result.location}</span>
+                </div>
+                
+                <div className="h-px bg-[#262626] my-5" />
+                
+                <p className="text-[15px] text-[#D4D4D8] leading-relaxed mb-5">
+                  {result.summary}
+                </p>
+              </div>
 
-                <Card className="bg-card border-border"><CardHeader><CardTitle>Must-Haves</CardTitle></CardHeader><CardContent className="p-6 pt-0"><ul className="space-y-2">{result.mustHaves.map((item, i) => (<li key={i} className="flex items-start"><span className="text-primary mr-2 mt-1">•</span><span>{item}</span></li>))}</ul></CardContent></Card>
-                <Card className="bg-card border-border"><CardHeader><CardTitle>Nice-to-Haves</CardTitle></CardHeader><CardContent className="p-6 pt-0"><ul className="space-y-2">{result.niceToHaves.map((item, i) => (<li key={i} className="flex items-start"><span className="text-primary mr-2 mt-1">•</span><span>{item}</span></li>))}</ul></CardContent></Card>
-                <Card className="col-span-1 md:col-span-2 bg-card border-border"><CardHeader><CardTitle>Keywords</CardTitle></CardHeader><CardContent className="p-6 pt-0 flex flex-wrap gap-2">{result.keywords.map((keyword, i) => (<Badge key={i} variant="outline" className="border-primary text-primary bg-primary/10">{keyword}</Badge>))}</CardContent></Card>
-                <Card className={`col-span-1 md:col-span-2 ${result.redFlags.length > 0 ? "border-amber-500/50 bg-amber-500/5" : "border-emerald-500/50 bg-emerald-500/5"}`}><CardHeader><CardTitle className="flex items-center">{result.redFlags.length > 0 ? <><AlertTriangle className="mr-2 text-amber-500" /> Red Flags</> : <><CheckCircle2 className="mr-2 text-emerald-500" /> No Red Flags</>}</CardTitle></CardHeader><CardContent className="p-6 pt-0">{result.redFlags.length > 0 ? (<ul className="space-y-2">{result.redFlags.map((flag, i) => (<li key={i} className="flex items-start text-amber-500/90"><span className="mr-2 text-amber-500 mt-1">•</span><span>{flag}</span></li>))}</ul>) : (<p className="text-emerald-500/90">&#10003; No red flags detected</p>)}</CardContent></Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Must-Haves */}
+                <div className="bg-[#111111]/80 backdrop-blur-xl border border-[#262626] rounded-xl p-7 h-full">
+                  <div className="flex items-center gap-2 mb-5">
+                    <CheckCircle2 className="w-4 h-4 text-violet-400" />
+                    <h3 className="text-sm font-semibold text-white uppercase tracking-wider">Must-Haves</h3>
+                  </div>
+                  <ul className="space-y-3">
+                    {result.mustHaves.map((item, i) => (
+                      <li key={i} className="flex items-start gap-3 text-[15px] text-[#D4D4D8] leading-relaxed">
+                        <div className="w-1.5 h-1.5 rounded-full bg-violet-400 mt-2 flex-shrink-0" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Nice-to-Haves */}
+                <div className="bg-[#111111]/80 backdrop-blur-xl border border-[#262626] rounded-xl p-7 h-full">
+                  <div className="flex items-center gap-2 mb-5">
+                    <Plus className="w-4 h-4 text-[#A1A1AA]" />
+                    <h3 className="text-sm font-semibold text-white uppercase tracking-wider">Nice-to-Haves</h3>
+                  </div>
+                  <ul className="space-y-3">
+                    {result.niceToHaves.map((item, i) => (
+                      <li key={i} className="flex items-start gap-3 text-[15px] text-[#D4D4D8] leading-relaxed">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#525252] mt-2 flex-shrink-0" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-              
-              <div className="flex justify-center mt-8">
-                <Button 
-                  variant="outline" 
-                  onClick={handleSaveToTracker} 
-                  disabled={isSaved}
-                  className={`transition-all duration-300 ${isSaved ? "text-green-500 border-green-500/50 bg-green-500/10" : "hover:bg-violet-500/10 hover:text-violet-500 hover:border-violet-500/50"}`}
-                >
-                  {isSaved ? <><CheckCircle2 className="mr-2 h-4 w-4" /> In Tracker</> : "Save to Tracker"}
-                </Button>
+
+              <div className="bg-[#111111]/80 backdrop-blur-xl border border-[#262626] rounded-xl p-7">
+                <div className="flex items-center gap-2 mb-5">
+                  <Tags className="w-4 h-4 text-violet-400" />
+                  <h3 className="text-sm font-semibold text-white uppercase tracking-wider">Keywords</h3>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {result.keywords.map((keyword, i) => (
+                    <span key={i} className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-violet-500/5 border border-violet-500/20 text-violet-200 hover:bg-violet-500/10 hover:border-violet-500/40 transition-all duration-150">
+                      {keyword}
+                    </span>
+                  ))}
+                </div>
               </div>
+
+              {result.redFlags.length > 0 ? (
+                <div className="bg-[#111111]/80 backdrop-blur-xl border border-amber-500/20 rounded-xl p-7">
+                  <div className="flex items-center gap-2 mb-5">
+                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    <h3 className="text-sm font-semibold text-white uppercase tracking-wider">Red Flags</h3>
+                  </div>
+                  <ul className="space-y-3">
+                    {result.redFlags.map((flag, i) => (
+                      <li key={i} className="flex items-start gap-3 text-[15px] text-[#D4D4D8] leading-relaxed">
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 flex-shrink-0" />
+                        <span>{flag}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 bg-[#111111]/80 backdrop-blur-xl border border-green-500/20 rounded-xl p-5">
+                  <div className="w-9 h-9 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center flex-shrink-0">
+                    <ShieldCheck className="w-4.5 h-4.5 text-green-400" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-white">No Red Flags Detected</div>
+                    <div className="text-xs text-[#A1A1AA] mt-0.5">This role looks clean based on JD analysis.</div>
+                  </div>
+                </div>
+              )}
             </div>
-
-            <div className="h-px bg-border w-full" />
 
             {/* --- RESUME SECTION --- */}
             <div ref={analysisRef}>
@@ -577,44 +672,79 @@ function ParsePageContent() {
               />
             </div>
 
-            <div className="h-px bg-border w-full" />
-
             {/* --- COLD OUTREACH SECTION --- */}
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold tracking-tight">LinkedIn Outreach</h2>
-                <p className="text-muted-foreground">Generate a connection request + follow-up DM tailored to this role.</p>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="bg-[#111111]/80 backdrop-blur-xl border border-[#262626] rounded-xl p-6"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-7 h-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+                  <MessageSquare className="w-3.5 h-3.5 text-violet-300" />
+                </div>
+                <span className="text-xs font-medium text-violet-300 uppercase tracking-wider">Step 4</span>
               </div>
+              
+              <h2 className="text-2xl font-semibold text-white tracking-tight">LinkedIn Outreach</h2>
+              <p className="text-sm text-[#A1A1AA] mt-1">Generate a connection request + follow-up DM tailored to this role.</p>
+              
+              <div className="h-px bg-[#262626] my-5" />
 
               {!outreach || isEditingOutreach ? (
                 <div className="space-y-4">
-                  <Textarea
-                    value={userBackground}
-                    onChange={(e) => setUserBackground(e.target.value)}
-                    onKeyDown={handleOutreachKeyDown}
-                    placeholder="e.g., Ex-engineer with 3 yrs at fintech startups, transitioning into PM via APM programs"
-                    className="min-h-[60px] resize-y bg-card border-border focus-visible:ring-primary text-base p-4"
-                  />
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <span className={`text-sm ${backgroundCharCount >= 20 ? (backgroundCharCount > 500 ? "text-red-500" : "text-violet-500") : "text-muted-foreground"}`}>
-                        {backgroundCharCount} / 500 chars
-                      </span>
-                      <div className="flex gap-2">
-                        {(["Warm", "Professional", "Bold"] as OutreachTone[]).map(t => (
+                  <div>
+                    <label className="text-xs font-medium text-[#A1A1AA] uppercase tracking-wider mb-2 block">
+                      Your background <span className="text-[#525252] normal-case">(optional)</span>
+                    </label>
+                    <textarea
+                      value={userBackground}
+                      onChange={(e) => setUserBackground(e.target.value)}
+                      onKeyDown={handleOutreachKeyDown}
+                      placeholder="e.g., Ex-engineer with 3 yrs at fintech startups, transitioning into PM via APM programs"
+                      className="min-h-[100px] bg-[#0A0A0A] border border-[#262626] rounded-lg px-4 py-3 text-sm text-white placeholder:text-[#525252] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 outline-none transition-all w-full resize-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-[#A1A1AA] uppercase tracking-wider mb-2 block">
+                      Tone
+                    </label>
+                    <div className="flex items-center gap-2">
+                      {(["Warm", "Professional", "Bold"] as OutreachTone[]).map(t => {
+                        const isSelected = outreachTone === t;
+                        return (
                           <button
                             key={t}
                             onClick={() => setOutreachTone(t)}
-                            className={`px-3 py-1 rounded-full text-sm transition-colors border ${outreachTone === t ? "bg-violet-500 text-white border-violet-500" : "border-border text-foreground hover:bg-muted"}`}
+                            className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-all duration-200 ${
+                              isSelected
+                                ? "bg-violet-500/15 border-violet-500/40 text-violet-200 shadow-[0_0_15px_-5px_rgba(167,139,250,0.4)]"
+                                : "bg-transparent border-[#262626] text-[#A1A1AA] hover:border-[#404040] hover:text-white"
+                            }`}
                           >
                             {t}
                           </button>
-                        ))}
-                      </div>
+                        );
+                      })}
                     </div>
-                    <Button onClick={handleGenerateOutreach} disabled={!canGenerateOutreach || backgroundCharCount > 500} className={`transition-all duration-300 ${generatingOutreach ? "animate-pulse" : ""}`}>
-                      {generatingOutreach ? <><Loader2 className="mr-2 h-4 w-4 animate-spin text-violet-500" />Drafting messages...</> : "Generate Outreach"}
-                    </Button>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-5">
+                    <span className={`text-xs ${backgroundCharCount >= 20 ? (backgroundCharCount > 500 ? "text-red-500" : "text-[#A1A1AA]") : "text-[#525252]"}`}>
+                      {backgroundCharCount} / 500 chars
+                    </span>
+                    <button 
+                      onClick={handleGenerateOutreach} 
+                      disabled={!canGenerateOutreach || backgroundCharCount > 500} 
+                      className={`flex items-center gap-2 font-medium h-10 px-5 rounded-lg transition-all duration-200 ${
+                        (!canGenerateOutreach || backgroundCharCount > 500)
+                          ? "bg-violet-500 opacity-50 cursor-not-allowed text-white"
+                          : "bg-violet-500 hover:bg-violet-600 text-white shadow-[0_0_20px_-5px_rgba(167,139,250,0.5)] active:scale-[0.98]"
+                      } ${generatingOutreach ? "animate-pulse" : ""}`}
+                    >
+                      {generatingOutreach ? <><Loader2 className="w-4 h-4 animate-spin" /> Drafting messages...</> : <>Generate Outreach <ArrowRight className="w-4 h-4" /></>}
+                    </button>
                   </div>
                   
                   {generatingOutreach && (
@@ -677,22 +807,49 @@ function ParsePageContent() {
                   </div>
                 </div>
               )}
-            </div>
-
-            <div className="h-px bg-border w-full" />
+            </motion.div>
 
             {/* --- 7-DAY PREP PLAN SECTION --- */}
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold tracking-tight">7-Day Interview Prep Plan</h2>
-                <p className="text-muted-foreground">A personalized day-by-day plan to prepare for this specific role.</p>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="bg-[#111111]/80 backdrop-blur-xl border border-[#262626] rounded-xl p-6"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-7 h-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+                  <CalendarDays className="w-3.5 h-3.5 text-violet-300" />
+                </div>
+                <span className="text-xs font-medium text-violet-300 uppercase tracking-wider">Step 5</span>
               </div>
+              
+              <h2 className="text-2xl font-semibold text-white tracking-tight">7-Day Interview Prep Plan</h2>
+              <p className="text-sm text-[#A1A1AA] mt-1">A personalized day-by-day plan to prepare for this specific role.</p>
+              
+              <div className="h-px bg-[#262626] my-5" />
 
               {!prepPlan ? (
-                <div className="flex flex-col items-start gap-4">
-                  <Button onClick={handleGeneratePlan} disabled={generatingPlan} className={`bg-violet-600 hover:bg-violet-700 text-white transition-all duration-300 ${generatingPlan ? "animate-pulse" : ""}`}>
-                    {generatingPlan ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Building your plan...</> : "Generate Prep Plan"}
-                  </Button>
+                <div className="space-y-6">
+                  <div className="bg-[#0A0A0A] border border-[#1f1f1f] rounded-lg p-4 space-y-2">
+                    <div className="flex items-start gap-2 text-sm text-[#A1A1AA]"><div className="w-1 h-1 rounded-full bg-violet-400 mt-2 shrink-0" /><span>Day 1-2: Company & product deep dive</span></div>
+                    <div className="flex items-start gap-2 text-sm text-[#A1A1AA]"><div className="w-1 h-1 rounded-full bg-violet-400 mt-2 shrink-0" /><span>Day 3-4: Frameworks & case prep</span></div>
+                    <div className="flex items-start gap-2 text-sm text-[#A1A1AA]"><div className="w-1 h-1 rounded-full bg-violet-400 mt-2 shrink-0" /><span>Day 5-6: Mock interviews & STAR drills</span></div>
+                    <div className="flex items-start gap-2 text-sm text-[#A1A1AA]"><div className="w-1 h-1 rounded-full bg-violet-400 mt-2 shrink-0" /><span>Day 7: Final review & questions to ask</span></div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button 
+                      onClick={handleGeneratePlan} 
+                      disabled={generatingPlan} 
+                      className={`flex items-center gap-2 font-medium h-10 px-5 rounded-lg transition-all duration-200 ${
+                        generatingPlan
+                          ? "bg-violet-500 opacity-50 cursor-not-allowed text-white animate-pulse"
+                          : "bg-violet-500 hover:bg-violet-600 text-white shadow-[0_0_20px_-5px_rgba(167,139,250,0.5)] active:scale-[0.98]"
+                      }`}
+                    >
+                      {generatingPlan ? <><Loader2 className="w-4 h-4 animate-spin" /> Building your plan...</> : <>Generate Plan <Sparkles className="w-4 h-4" /></>}
+                    </button>
+                  </div>
                   
                   {generatingPlan && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mt-6">
@@ -767,12 +924,78 @@ function ParsePageContent() {
                   </div>
                 </div>
               )}
-            </div>
+            </motion.div>
 
             <footer className="pt-8 pb-4 text-center">
             </footer>
           </div>
         )}
+          </div>
+
+          {/* RIGHT: helper sidebar */}
+          <aside className="space-y-4">
+            {/* Tips card */}
+            <div className="glass rounded-xl p-5 border border-white/[0.06]">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-md bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+                  <Lightbulb className="w-3.5 h-3.5 text-violet-400" />
+                </div>
+                <h3 className="text-sm font-semibold text-white">Tips for best results</h3>
+              </div>
+              <ul className="space-y-3">
+                <li className="flex items-start gap-3 text-[13px] text-[#A1A1AA] leading-relaxed">
+                  <div className="w-1 h-1 rounded-full bg-violet-400 mt-2 flex-shrink-0" />
+                  <span>Paste the full JD, not just bullet points</span>
+                </li>
+                <li className="flex items-start gap-3 text-[13px] text-[#A1A1AA] leading-relaxed">
+                  <div className="w-1 h-1 rounded-full bg-violet-400 mt-2 flex-shrink-0" />
+                  <span>Include &quot;Responsibilities&quot; + &quot;Requirements&quot; sections</span>
+                </li>
+                <li className="flex items-start gap-3 text-[13px] text-[#A1A1AA] leading-relaxed">
+                  <div className="w-1 h-1 rounded-full bg-violet-400 mt-2 flex-shrink-0" />
+                  <span>200+ words gives the most accurate extraction</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Try example */}
+            <button
+              onClick={loadExampleJD}
+              className="w-full glass rounded-xl p-5 border border-white/[0.06] hover:border-violet-500/30 transition text-left group"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-6 h-6 rounded-md bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+                  <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+                </div>
+                <h3 className="text-sm font-semibold text-white">Try an example</h3>
+              </div>
+              <p className="text-[13px] text-[#A1A1AA] leading-relaxed">Load a sample APM job description to see it in action.</p>
+              <div className="text-xs text-violet-300 hover:text-violet-200 mt-3 inline-flex items-center gap-1 font-medium transition-colors">
+                Load Example <ArrowRight className="w-3 h-3" />
+              </div>
+            </button>
+
+            {/* Recent (only if any exist) */}
+            {recentJDs.length > 0 && (
+              <div className="glass rounded-xl p-5 border border-white/[0.06]">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-md bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+                    <Clock className="w-3.5 h-3.5 text-violet-400" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-white">Recently parsed</h3>
+                </div>
+                <div className="space-y-2">
+                  {recentJDs.slice(0, 3).map((jd) => (
+                    <button key={jd.id} className="w-full text-left p-2 rounded-lg hover:bg-white/[0.03] transition">
+                      <div className="text-xs font-medium text-white truncate">{jd.role}</div>
+                      <div className="text-xs text-zinc-500 truncate">{jd.company}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </aside>
+        </div>
       </div>
     </main>
   );

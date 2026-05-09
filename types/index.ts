@@ -101,3 +101,21 @@ export interface ApplicationCard {
   location: string;
 }
 
+export interface ApplicationStats {
+  totalApplications: number;
+  activePipeline: number;
+  responseRate: number; // 0-100
+  daysSinceLastApplication: number | null;
+  applicationsPerWeek: { weekStart: string; count: number }[]; // last 12 weeks
+  funnelData: {
+    saved: number;
+    applied: number;
+    interviewing: number;
+    offer: number;
+    rejected: number;
+  };
+  avgDaysPerStage: { stage: string; days: number }[];
+  topCompanies: { company: string; count: number }[]; // top 5
+  matchLabelDistribution: { label: string; count: number }[]; // Strong/Partial/Weak
+}
+

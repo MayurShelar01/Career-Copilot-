@@ -7,8 +7,8 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  // Protect /parse and /tracker
-  if (pathname.startsWith("/parse") || pathname.startsWith("/tracker")) {
+  // Protect /parse, /tracker, and /analytics
+  if (pathname.startsWith("/parse") || pathname.startsWith("/tracker") || pathname.startsWith("/analytics")) {
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";

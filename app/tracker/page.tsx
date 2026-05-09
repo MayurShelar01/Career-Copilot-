@@ -36,20 +36,20 @@ const COLUMN_COLORS: Record<ApplicationStatus, string> = {
   Rejected: "bg-red-400",
 };
 
-const COLUMN_BORDER_COLORS: Record<ApplicationStatus, string> = {
-  Saved: "border-l-violet-400",
-  Applied: "border-l-blue-400",
-  Interviewing: "border-l-amber-400",
-  Offer: "border-l-green-400",
-  Rejected: "border-l-red-400",
+const COLUMN_TOP_BORDER_COLORS: Record<ApplicationStatus, string> = {
+  Saved: "border-t-2 border-t-violet-500/40",
+  Applied: "border-t-2 border-t-blue-500/40",
+  Interviewing: "border-t-2 border-t-amber-500/40",
+  Offer: "border-t-2 border-t-emerald-500/40",
+  Rejected: "border-t-2 border-t-red-500/40",
 };
 
 const COLUMN_EMPTY_ICONS: Record<ApplicationStatus, React.ReactNode> = {
-  Saved: <Bookmark className="w-10 h-10 text-muted-foreground/30 mb-2" />,
-  Applied: <Inbox className="w-10 h-10 text-muted-foreground/30 mb-2" />,
-  Interviewing: <Users className="w-10 h-10 text-muted-foreground/30 mb-2" />,
-  Offer: <Trophy className="w-10 h-10 text-muted-foreground/30 mb-2" />,
-  Rejected: <XCircle className="w-10 h-10 text-muted-foreground/30 mb-2" />,
+  Saved: <Bookmark className="w-10 h-10 text-zinc-700 mb-2" />,
+  Applied: <Inbox className="w-10 h-10 text-zinc-700 mb-2" />,
+  Interviewing: <Users className="w-10 h-10 text-zinc-700 mb-2" />,
+  Offer: <Trophy className="w-10 h-10 text-zinc-700 mb-2" />,
+  Rejected: <XCircle className="w-10 h-10 text-zinc-700 mb-2" />,
 };
 
 // Sortable Card Component
@@ -122,7 +122,7 @@ function SortableCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-card border border-border border-l-2 ${COLUMN_BORDER_COLORS[app.status]} rounded-md p-4 shadow-sm cursor-grab active:cursor-grabbing mb-3 flex flex-col`}
+      className={`bg-gradient-to-b from-white/[0.04] to-white/[0.02] border border-white/[0.08] hover:border-violet-500/30 rounded-lg p-4 shadow-sm transition-all duration-200 cursor-grab active:cursor-grabbing hover:shadow-lg hover:shadow-violet-500/5 hover:-translate-y-0.5 mb-3 flex flex-col ${isDragging ? 'scale-105 rotate-2' : ''}`}
       onClick={(e) => {
         // Prevent expanding if clicking on a button or textarea
         if ((e.target as HTMLElement).closest('button, a, textarea')) return;
@@ -133,19 +133,19 @@ function SortableCard({
     >
       <div className="flex justify-between items-start">
         <div className="flex-1 overflow-hidden pr-2">
-          <h4 className="font-bold text-lg leading-tight mb-1 truncate" title={app.role}>{app.role}</h4>
-          <p className="text-sm text-muted-foreground truncate">{app.company}</p>
-          <p className="text-xs text-muted-foreground/80 truncate">{app.location}</p>
+          <h4 className="font-semibold text-[15px] text-white leading-tight mb-2 truncate" title={app.role}>{app.role}</h4>
+          <p className="text-sm font-medium text-zinc-300 truncate">{app.company}</p>
+          <p className="text-xs text-zinc-500 mt-0.5 truncate">{app.location}</p>
         </div>
       </div>
       
-      <div className="flex justify-between items-center mt-4">
-        <span className="text-xs text-muted-foreground">{dateFormatted}</span>
-        <div className="flex gap-2">
-          <button onClick={(e) => { e.stopPropagation(); window.location.href = `/parse?jdId=${app.parsedJDId}`; }} className="text-muted-foreground hover:text-foreground">
+      <div className="flex justify-between items-center mt-4 pt-3 border-t border-white/[0.06]">
+        <span className="text-xs text-zinc-500">{dateFormatted}</span>
+        <div className="flex gap-1">
+          <button onClick={(e) => { e.stopPropagation(); window.location.href = `/parse?jdId=${app.parsedJDId}`; }} className="w-7 h-7 rounded-md flex items-center justify-center text-zinc-500 hover:text-white hover:bg-white/[0.06] transition-colors duration-150">
             <ExternalLink className="w-4 h-4" />
           </button>
-          <button onClick={(e) => { e.stopPropagation(); deleteApp(app.id); }} className="text-muted-foreground hover:text-red-400">
+          <button onClick={(e) => { e.stopPropagation(); deleteApp(app.id); }} className="w-7 h-7 rounded-md flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors duration-150">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
@@ -231,13 +231,13 @@ function KanbanColumn({ status, columnApps, children }: { status: ApplicationSta
   return (
     <div
       ref={setNodeRef}
-      className={`flex-1 p-3 min-h-[400px] transition-colors duration-200 ${isOver ? "bg-violet-500/10 ring-1 ring-inset ring-violet-500/50 rounded-b-xl" : ""}`}
+      className={`flex-1 transition-colors duration-200 ${isOver ? "bg-violet-500/[0.03] border-violet-500/20 rounded-lg" : ""}`}
     >
       <SortableContext 
         items={columnApps.map(a => a.id)} 
         strategy={verticalListSortingStrategy}
       >
-        <div className="h-full w-full">
+        <div className="h-full w-full flex flex-col gap-3">
           {children}
         </div>
       </SortableContext>
@@ -376,20 +376,28 @@ export default function TrackerPage() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <div className="flex-1 p-4 md:p-8 max-w-[1600px] mx-auto w-full flex flex-col">
+    <div className="min-h-screen bg-[#0A0A0A] bg-[radial-gradient(ellipse_at_top,_rgba(167,139,250,0.08),transparent_50%)] text-foreground flex flex-col">
+      <div className="flex-1 px-4 md:px-8 max-w-[1600px] mx-auto w-full flex flex-col pt-12 pb-4">
         
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start mb-10 gap-4 border-b border-white/[0.06] pb-8">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Application Tracker</h1>
-            <p className="text-muted-foreground">Drag cards between columns to update your status.</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-white mb-1">Application Tracker</h1>
+            <p className="text-sm text-zinc-500">Drag cards between columns to update your status.</p>
           </div>
-          <Button variant="outline" onClick={exportData} className="shrink-0 border-violet-500/50 hover:bg-violet-500/10">
-            {exportFeedback ? <><Check className="w-4 h-4 mr-2 text-green-500" /> Exported!</> : <><Download className="w-4 h-4 mr-2" /> Export Backup</>}
-          </Button>        </div>
+          <button 
+            onClick={exportData} 
+            className="flex items-center bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] text-zinc-300 hover:text-white px-4 py-2 rounded-lg transition-all duration-200 group"
+          >
+            {exportFeedback ? (
+              <><Check className="w-4 h-4 mr-2 text-green-500" /> Exported!</>
+            ) : (
+              <><Download className="w-4 h-4 mr-2 text-zinc-500 group-hover:text-violet-400 transition-colors duration-200" /> Export Backup</>
+            )}
+          </button>
+        </div>
 
-        <div className="flex-1 overflow-x-auto pb-4">
-          <div className="flex gap-4 h-full min-h-[500px]">
+        <div className="flex-1 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+          <div className="flex xl:grid xl:grid-cols-5 gap-4 h-full min-h-[500px]">
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -401,23 +409,23 @@ export default function TrackerPage() {
                 const columnApps = apps.filter(a => a.status === status);
                 
                 return (
-                  <div key={status} className="min-w-[280px] w-[320px] flex-shrink-0 flex flex-col bg-[#111111] rounded-xl border border-border overflow-hidden">
-                    <div className="p-4 border-b border-border bg-[#0A0A0A] flex items-center justify-between sticky top-0 z-10">
+                  <div key={status} className={`min-w-[280px] xl:min-w-0 w-full flex-shrink-0 flex flex-col bg-white/[0.02] rounded-xl border border-white/[0.06] p-4 min-h-[500px] ${COLUMN_TOP_BORDER_COLORS[status]}`}>
+                    <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/[0.06]">
                       <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${COLUMN_COLORS[status]}`} />
-                        <h3 className="font-bold text-sm tracking-wide">{status}</h3>
+                        <div className={`w-2 h-2 rounded-full ${COLUMN_COLORS[status]}`} />
+                        <h3 className="text-sm font-medium text-zinc-200 tracking-wide">{status}</h3>
                       </div>
-                      <Badge variant="secondary" className="bg-muted text-xs px-2 py-0.5">{columnApps.length}</Badge>
+                      <div className="bg-white/[0.05] px-2 py-0.5 rounded-md text-xs text-zinc-400">{columnApps.length}</div>
                     </div>
 
                     <KanbanColumn status={status} columnApps={columnApps}>
                       {columnApps.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+                        <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-white/[0.06] rounded-lg mx-2 transition-colors duration-200">
                           {COLUMN_EMPTY_ICONS[status]}
-                          <p className="text-sm font-medium text-muted-foreground/70 mb-1">
+                          <p className="text-sm font-medium text-zinc-500 mb-1">
                             {status === "Saved" ? "No saved jobs yet" : "No applications here"}
                           </p>
-                          <p className="text-xs text-muted-foreground/50">
+                          <p className="text-xs text-zinc-600">
                             {status === "Saved" ? "Parse a JD and click 'Save to Tracker'" : "Drag a card here to update status"}
                           </p>
                           {status === "Saved" && (
@@ -448,9 +456,10 @@ export default function TrackerPage() {
                 sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: "0.4" } } })
               }}>
                 {activeApp ? (
-                  <div className={`bg-card border border-border border-l-2 ${COLUMN_BORDER_COLORS[activeApp.status]} rounded-md p-4 shadow-xl opacity-90`}>
-                    <h4 className="font-bold text-lg leading-tight mb-1 truncate">{activeApp.role}</h4>
-                    <p className="text-sm text-muted-foreground truncate">{activeApp.company}</p>
+                  <div className={`bg-gradient-to-b from-white/[0.04] to-white/[0.02] border border-violet-500/30 rounded-lg p-4 shadow-xl opacity-90 scale-105 rotate-2 ${COLUMN_TOP_BORDER_COLORS[activeApp.status]}`}>
+                    <h4 className="font-semibold text-[15px] text-white leading-tight mb-2 truncate">{activeApp.role}</h4>
+                    <p className="text-sm font-medium text-zinc-300 truncate">{activeApp.company}</p>
+                    <p className="text-xs text-zinc-500 mt-0.5 truncate">{activeApp.location}</p>
                   </div>
                 ) : null}
               </DragOverlay>

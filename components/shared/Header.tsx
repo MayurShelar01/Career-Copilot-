@@ -64,28 +64,50 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#262626] bg-[#0A0A0A]">
-      <div className="flex h-14 items-center justify-between px-4 md:px-8 max-w-7xl mx-auto">
-        <Link href="/" className="font-bold text-violet-500 hover:text-violet-400 transition-colors">
-          PM Career Copilot
+    <header className="sticky top-0 z-50 backdrop-blur-md bg-black/40 border-b border-white/[0.06]">
+      <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+        <Link href="/" className="hover:opacity-80 transition flex items-center" aria-label="PM Career Copilot">
+          <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 drop-shadow-md">
+            <defs>
+              <linearGradient id="c-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#FFFFFF"/>
+                <stop offset="50%" stopColor="#94A3B8"/>
+                <stop offset="100%" stopColor="#334155"/>
+              </linearGradient>
+              <linearGradient id="p-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#3B82F6"/>
+                <stop offset="100%" stopColor="#7C3AED"/>
+              </linearGradient>
+            </defs>
+            <g strokeWidth="22" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M 65 25 A 35 35 0 1 0 65 85" stroke="url(#c-grad)" />
+              <path d="M 65 105 L 65 25 L 80 25 A 25 25 0 0 1 80 75 L 65 75" stroke="url(#p-grad)" />
+            </g>
+          </svg>
         </Link>
         <nav className="flex items-center space-x-6 text-sm font-medium">
           <Link
             href="/parse"
-            className={`transition-colors hover:text-foreground/80 ${pathname === "/parse" ? "text-violet-500 border-b-2 border-violet-500 pb-1" : "text-foreground/60"}`}
+            className={`transition-colors relative text-sm font-medium ${pathname === "/parse" ? "text-white after:absolute after:bottom-[-4px] after:left-0 after:w-full after:h-[2px] after:bg-violet-500 after:rounded-full" : "text-zinc-400 hover:text-white"}`}
           >
             Parse JD
           </Link>
           <Link
             href="/tracker"
-            className={`transition-colors hover:text-foreground/80 flex items-center gap-2 ${pathname === "/tracker" ? "text-violet-500 border-b-2 border-violet-500 pb-1" : "text-foreground/60"}`}
+            className={`transition-colors relative text-sm font-medium flex items-center gap-2 ${pathname === "/tracker" ? "text-white after:absolute after:bottom-[-4px] after:left-0 after:w-full after:h-[2px] after:bg-violet-500 after:rounded-full" : "text-zinc-400 hover:text-white"}`}
           >
             Tracker
             {appCount > 0 && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-500 text-[10px] text-white">
+              <span className="bg-violet-500/15 text-violet-300 border border-violet-500/20 text-xs px-1.5 py-0.5 rounded-md ml-1.5">
                 {appCount}
               </span>
             )}
+          </Link>
+          <Link
+            href="/analytics"
+            className={`transition-colors relative text-sm font-medium ${pathname === "/analytics" ? "text-white after:absolute after:bottom-[-4px] after:left-0 after:w-full after:h-[2px] after:bg-violet-500 after:rounded-full" : "text-zinc-400 hover:text-white"}`}
+          >
+            Analytics
           </Link>
 
           <div className="h-6 w-px bg-[#262626] mx-2"></div>
