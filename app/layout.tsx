@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
+import { Toaster } from "sonner";
 
 import { Header } from "@/components/shared/Header";
 
@@ -35,6 +36,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <Header />
           {children}
+          <Toaster theme="dark" richColors position="bottom-right" toastOptions={{ className: 'border border-[#262626] bg-[#111111]' }} />
         </ThemeProvider>
       </body>
     </html>

@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { storage } from "@/lib/storage/storage";
 import { createClient } from "@/lib/supabase/client";
-import { LogOut, User as UserIcon } from "lucide-react";
+import { LogOut, User as UserIcon, Menu, X } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 export function Header() {
@@ -14,23 +14,22 @@ export function Header() {
   const [appCount, setAppCount] = useState(0);
   const [user, setUser] = useState<User | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
     
-    // Get initial session
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setUser(data.user);
+    // Get initial session quickly
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) setUser(session.user);
     });
-
+    
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user || null);
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -58,11 +57,43 @@ export function Header() {
     };
   }, [user]);
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
   const handleSignOut = async () => {
-    // using the API route to clear server cookies as well
     await fetch("/auth/signout", { method: "POST" });
     window.location.href = "/";
   };
+
+  const navLinks = (
+    <>
+      <Link
+        href="/parse"
+        className={`transition-colors relative text-sm font-medium ${pathname === "/parse" ? "text-white after:absolute after:bottom-[-4px] after:left-0 after:w-full after:h-[2px] after:bg-violet-500 after:rounded-full" : "text-zinc-400 hover:text-white"}`}
+      >
+        Parse JD
+      </Link>
+      <Link
+        href="/tracker"
+        className={`transition-colors relative text-sm font-medium flex items-center gap-2 ${pathname === "/tracker" ? "text-white after:absolute after:bottom-[-4px] after:left-0 after:w-full after:h-[2px] after:bg-violet-500 after:rounded-full" : "text-zinc-400 hover:text-white"}`}
+      >
+        Tracker
+        {appCount > 0 && (
+          <span className="bg-violet-500/15 text-violet-300 border border-violet-500/20 text-xs px-1.5 py-0.5 rounded-md ml-1.5">
+            {appCount}
+          </span>
+        )}
+      </Link>
+      <Link
+        href="/analytics"
+        className={`transition-colors relative text-sm font-medium ${pathname === "/analytics" ? "text-white after:absolute after:bottom-[-4px] after:left-0 after:w-full after:h-[2px] after:bg-violet-500 after:rounded-full" : "text-zinc-400 hover:text-white"}`}
+      >
+        Analytics
+      </Link>
+    </>
+  );
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-md bg-black/40 border-b border-white/[0.06]">
@@ -86,30 +117,10 @@ export function Header() {
             </g>
           </svg>
         </Link>
-        <nav className="flex items-center space-x-6 text-sm font-medium">
-          <Link
-            href="/parse"
-            className={`transition-colors relative text-sm font-medium ${pathname === "/parse" ? "text-white after:absolute after:bottom-[-4px] after:left-0 after:w-full after:h-[2px] after:bg-violet-500 after:rounded-full" : "text-zinc-400 hover:text-white"}`}
-          >
-            Parse JD
-          </Link>
-          <Link
-            href="/tracker"
-            className={`transition-colors relative text-sm font-medium flex items-center gap-2 ${pathname === "/tracker" ? "text-white after:absolute after:bottom-[-4px] after:left-0 after:w-full after:h-[2px] after:bg-violet-500 after:rounded-full" : "text-zinc-400 hover:text-white"}`}
-          >
-            Tracker
-            {appCount > 0 && (
-              <span className="bg-violet-500/15 text-violet-300 border border-violet-500/20 text-xs px-1.5 py-0.5 rounded-md ml-1.5">
-                {appCount}
-              </span>
-            )}
-          </Link>
-          <Link
-            href="/analytics"
-            className={`transition-colors relative text-sm font-medium ${pathname === "/analytics" ? "text-white after:absolute after:bottom-[-4px] after:left-0 after:w-full after:h-[2px] after:bg-violet-500 after:rounded-full" : "text-zinc-400 hover:text-white"}`}
-          >
-            Analytics
-          </Link>
+
+        {/* Desktop Nav */}
+        <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
+          {navLinks}
 
           <div className="h-6 w-px bg-[#262626] mx-2"></div>
 
@@ -169,7 +180,65 @@ export function Header() {
             </Link>
           )}
         </nav>
+
+        {/* Mobile Menu Button */}
+        <button
+          className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label="Toggle menu"
+        >
+          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
       </div>
+
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-white/[0.06] bg-black/80 backdrop-blur-lg">
+          <div className="px-6 py-4 flex flex-col space-y-4">
+            {navLinks}
+            
+            <div className="h-px bg-[#262626] my-1" />
+            
+            {user ? (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {user.user_metadata?.avatar_url ? (
+                    <Image 
+                      src={user.user_metadata.avatar_url} 
+                      alt="Avatar" 
+                      width={32}
+                      height={32}
+                      className="w-8 h-8 rounded-full border border-[#262626]" 
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-violet-500/20 text-violet-500 flex items-center justify-center border border-violet-500/30">
+                      <UserIcon className="w-4 h-4" />
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm font-medium text-white truncate">{user.user_metadata?.full_name || "User"}</p>
+                    <p className="text-xs text-zinc-500 truncate">{user.email}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  className="text-sm text-red-400 hover:text-red-300 flex items-center gap-1.5 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <Link 
+                href="/login"
+                className="text-sm font-medium text-white bg-violet-500 hover:bg-violet-600 px-4 py-2 rounded-full transition-colors text-center"
+              >
+                Sign in
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Search, FileCheck, PenTool, MessageSquare, Calendar, Layout, Loader2, ArrowRight, Lock } from "lucide-react";
+import { Search, FileCheck, PenTool, MessageSquare, Calendar, Layout, ArrowRight, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
@@ -13,41 +13,81 @@ export default function Home() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
+    
+    // Check session quickly
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
       setLoading(false);
     });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
   const features = [
     {
-      icon: <Search className="w-5 h-5 text-violet-300" />,
+      icon: <Search className="w-5 h-5" />,
       title: "JD Parser",
       description: "Paste any JD. Get role, keywords, red flags instantly.",
+      color: "violet",
+      iconBg: "from-violet-500/20 to-violet-600/10",
+      iconBorder: "border-violet-500/30",
+      iconColor: "text-violet-300",
+      step: "01",
     },
     {
-      icon: <FileCheck className="w-5 h-5 text-violet-300" />,
+      icon: <FileCheck className="w-5 h-5" />,
       title: "Gap Analyzer",
-      description: "See exactly how your resume matches. Strong / Partial / Weak.",
+      description: "See exactly how your resume matches — Strong, Partial, or Weak.",
+      color: "blue",
+      iconBg: "from-blue-500/20 to-blue-600/10",
+      iconBorder: "border-blue-500/30",
+      iconColor: "text-blue-300",
+      step: "02",
     },
     {
-      icon: <PenTool className="w-5 h-5 text-violet-300" />,
+      icon: <PenTool className="w-5 h-5" />,
       title: "Tailored Bullets",
       description: "3-5 STAR bullets written from your experience, not templates.",
+      color: "emerald",
+      iconBg: "from-emerald-500/20 to-emerald-600/10",
+      iconBorder: "border-emerald-500/30",
+      iconColor: "text-emerald-300",
+      step: "03",
     },
     {
-      icon: <MessageSquare className="w-5 h-5 text-violet-300" />,
+      icon: <MessageSquare className="w-5 h-5" />,
       title: "Cold Outreach",
-      description: "LinkedIn connection note + follow-up DM. Tone: Warm, Pro, or Bold.",
+      description: "LinkedIn connection note + follow-up DM. Warm, Pro, or Bold tone.",
+      color: "amber",
+      iconBg: "from-amber-500/20 to-amber-600/10",
+      iconBorder: "border-amber-500/30",
+      iconColor: "text-amber-300",
+      step: "04",
     },
     {
-      icon: <Calendar className="w-5 h-5 text-violet-300" />,
+      icon: <Calendar className="w-5 h-5" />,
       title: "7-Day Prep Plan",
-      description: "A day-by-day plan tailored to your role and company.",
+      description: "A day-by-day plan tailored to your target role and company.",
+      color: "rose",
+      iconBg: "from-rose-500/20 to-rose-600/10",
+      iconBorder: "border-rose-500/30",
+      iconColor: "text-rose-300",
+      step: "05",
     },
     {
-      icon: <Layout className="w-5 h-5 text-violet-300" />,
+      icon: <Layout className="w-5 h-5" />,
       title: "Application Tracker",
-      description: "Kanban board. Drag. Track. Export. No spreadsheets.",
+      description: "Kanban board. Drag. Track. Export. No more spreadsheets.",
+      color: "cyan",
+      iconBg: "from-cyan-500/20 to-cyan-600/10",
+      iconBorder: "border-cyan-500/30",
+      iconColor: "text-cyan-300",
+      step: "06",
     },
   ];
 
@@ -77,8 +117,8 @@ export default function Home() {
             
             <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
               {loading ? (
-                <button disabled className="btn-glow px-7 py-3.5 rounded-full text-white font-medium inline-flex items-center gap-2 opacity-70 cursor-not-allowed">
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading...
+                <button className="glass px-7 py-3.5 rounded-full text-white/50 font-medium inline-flex items-center gap-2 animate-pulse cursor-wait">
+                  <div className="h-4 w-24 bg-white/10 rounded" />
                 </button>
               ) : user ? (
                 <Link href="/parse" className="btn-glow px-7 py-3.5 rounded-full text-white font-medium inline-flex items-center gap-2">
@@ -99,7 +139,7 @@ export default function Home() {
             <div className="mt-8 flex flex-col items-center gap-2">
               <div className="flex items-center gap-1.5 text-zinc-500 text-sm">
                 <Lock className="w-3.5 h-3.5" />
-                No login. No credit card. Your data stays in your browser.
+                Secure login. No credit card. Your data is private and persistent.
               </div>
             </div>
           </div>
@@ -108,11 +148,12 @@ export default function Home() {
         {/* 2. Feature Grid */}
         <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-5 pb-24 relative z-10 w-full">
           {features.map((feature, idx) => (
-            <div key={idx} className="card-interactive p-7 group">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-5
-                              bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10
-                              border border-violet-500/30
-                              group-hover:border-violet-400/50 transition">
+            <div key={idx} className="card-interactive p-7 group relative overflow-hidden">
+              <div className="absolute top-4 right-4 text-[10px] font-mono text-zinc-600 tracking-widest">{feature.step}</div>
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-5
+                              bg-gradient-to-br ${feature.iconBg}
+                              border ${feature.iconBorder}
+                              group-hover:scale-110 transition-transform duration-300 ${feature.iconColor}`}>
                 {feature.icon}
               </div>
               <h3 className="text-white font-semibold text-lg mb-2">{feature.title}</h3>
@@ -124,12 +165,10 @@ export default function Home() {
         </div>
 
         {/* 3. Bottom CTA */}
-        <section className="w-full text-center space-y-8 pb-20 pt-10 border-t border-[#262626]">
-          <h2 className="text-3xl font-bold text-foreground">Ready to apply smarter?</h2>
+        <section className="w-full text-center flex flex-col items-center gap-12 pb-32 pt-24 border-t border-[#262626] bg-[#0A0A0A]">
+          <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight">Ready to apply smarter?</h2>
           {loading ? (
-            <Button size="lg" disabled className="text-lg px-8 py-6 rounded-full bg-violet-500 text-white opacity-70">
-              <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading...
-            </Button>
+            <div className="h-16 w-64 mx-auto bg-white/5 rounded-full animate-pulse" />
           ) : user ? (
             <Link href="/parse">
               <Button size="lg" className="text-lg px-8 py-6 rounded-full bg-violet-500 hover:bg-violet-600 text-white">

@@ -25,6 +25,7 @@ import { storage } from "@/lib/storage/storage";
 import { Button } from "@/components/ui/button";
 import { Download, ExternalLink, Trash2, Bookmark, Inbox, Users, Trophy, XCircle, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 const COLUMNS: ApplicationStatus[] = ["Saved", "Applied", "Interviewing", "Offer", "Rejected"];
 
@@ -42,6 +43,14 @@ const COLUMN_TOP_BORDER_COLORS: Record<ApplicationStatus, string> = {
   Interviewing: "border-t-2 border-t-amber-500/40",
   Offer: "border-t-2 border-t-emerald-500/40",
   Rejected: "border-t-2 border-t-red-500/40",
+};
+
+const CARD_LEFT_BORDER: Record<ApplicationStatus, string> = {
+  Saved: "border-l-2 border-l-violet-500/60",
+  Applied: "border-l-2 border-l-blue-500/60",
+  Interviewing: "border-l-2 border-l-amber-500/60",
+  Offer: "border-l-2 border-l-emerald-500/60",
+  Rejected: "border-l-2 border-l-red-500/60",
 };
 
 const COLUMN_EMPTY_ICONS: Record<ApplicationStatus, React.ReactNode> = {
@@ -122,7 +131,7 @@ function SortableCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-gradient-to-b from-white/[0.04] to-white/[0.02] border border-white/[0.08] hover:border-violet-500/30 rounded-lg p-4 shadow-sm transition-all duration-200 cursor-grab active:cursor-grabbing hover:shadow-lg hover:shadow-violet-500/5 hover:-translate-y-0.5 mb-3 flex flex-col ${isDragging ? 'scale-105 rotate-2' : ''}`}
+      className={`bg-gradient-to-b from-white/[0.04] to-white/[0.02] border border-white/[0.08] hover:border-violet-500/30 rounded-lg p-4 shadow-sm transition-all duration-200 cursor-grab active:cursor-grabbing hover:shadow-lg hover:shadow-violet-500/5 hover:-translate-y-0.5 mb-3 flex flex-col ${CARD_LEFT_BORDER[app.status]} ${isDragging ? 'scale-105 rotate-2' : ''}`}
       onClick={(e) => {
         // Prevent expanding if clicking on a button or textarea
         if ((e.target as HTMLElement).closest('button, a, textarea')) return;
@@ -302,6 +311,7 @@ export default function TrackerPage() {
     if (window.confirm("Delete this application? This action cannot be undone.")) {
       await storage.deleteApplication(id);
       setApps(await storage.getApplications());
+      toast.success("Application deleted");
     }
   };
 
@@ -328,6 +338,7 @@ export default function TrackerPage() {
     URL.revokeObjectURL(url);
     
     setExportFeedback(true);
+    toast.success("Data exported successfully");
     setTimeout(() => setExportFeedback(false), 2000);
   };
 
@@ -371,6 +382,7 @@ export default function TrackerPage() {
     );
     setApps(updated);
     await storage.updateApplicationStatus(cardId, newStatus);
+    toast.success(`Moved to ${newStatus}`);
   };
 
   if (!mounted) return null;

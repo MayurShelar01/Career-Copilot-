@@ -91,27 +91,50 @@ export default function AnalyticsPage() {
     };
   }, []);
 
-  const renderEmptyState = () => (
-    <div className="flex flex-col items-center justify-center py-32 px-4 text-center">
-      <div className="bg-[#111111] border border-[#262626] rounded-xl p-10 max-w-md w-full flex flex-col items-center space-y-6">
-        <LockKeyhole className="w-12 h-12 text-violet-500" />
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-foreground">Your analytics are locked</h2>
-          <p className="text-muted-foreground text-sm">
-            Apply to 3+ jobs and your analytics will unlock automatically.
-          </p>
+  const renderEmptyState = () => {
+    const current = stats?.totalApplications || 0;
+    const target = 3;
+    const progress = Math.min((current / target) * 100, 100);
+    
+    return (
+      <div className="flex flex-col items-center justify-center py-32 px-4 text-center">
+        <div className="bg-[#111111] border border-[#262626] rounded-xl p-10 max-w-md w-full flex flex-col items-center space-y-6">
+          <div className="w-16 h-16 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+            <LockKeyhole className="w-8 h-8 text-violet-400" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-foreground">Analytics unlock at 3 applications</h2>
+            <p className="text-muted-foreground text-sm">
+              Parse and save JDs to your tracker to unlock your job search insights.
+            </p>
+          </div>
+          
+          {/* Progress indicator */}
+          <div className="w-full space-y-2">
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">{current} / {target} applications</span>
+              <span className="text-violet-400">{Math.round(progress)}%</span>
+            </div>
+            <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {current === 0 ? "Get started by parsing your first JD" : `${target - current} more to unlock`}
+            </p>
+          </div>
+
+          <Link href="/parse">
+            <button className="bg-violet-500 hover:bg-violet-600 text-white font-medium py-2.5 px-6 rounded-full transition-colors">
+              Parse a JD →
+            </button>
+          </Link>
         </div>
-        <Link href="/parse">
-          <button className="bg-violet-500 hover:bg-violet-600 text-white font-medium py-2.5 px-6 rounded-full transition-colors">
-            Parse a JD →
-          </button>
-        </Link>
-        <p className="text-xs text-muted-foreground">
-          You have {stats?.totalApplications || 0} applications saved.
-        </p>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderLoadingState = () => (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-8">

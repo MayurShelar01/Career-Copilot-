@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as cheerio from "cheerio";
+import { createClient } from "@/lib/supabase/server";
 
 export interface ImportJDResponse {
   success: boolean;
@@ -13,6 +14,13 @@ export interface ImportJDResponse {
 
 export async function POST(req: NextRequest) {
   try {
+    // Auth check
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
     const { url } = await req.json();
 
     if (!url || typeof url !== "string") {

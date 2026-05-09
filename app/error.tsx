@@ -19,7 +19,7 @@ export default function Error({
       <div className="text-center space-y-4 p-8">
         <h2 className="text-2xl font-bold text-[#FAFAFA]">Something went wrong</h2>
         <p className="text-[#A1A1AA] max-w-md">
-          An unexpected error occurred. Your data is safe in your browser.
+          An unexpected error occurred. Your data is safe and securely stored.
         </p>
         <Button onClick={reset} className="bg-[#A78BFA] hover:bg-[#8B5CF6]">
           Try Again

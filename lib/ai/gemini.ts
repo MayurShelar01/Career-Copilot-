@@ -1,7 +1,8 @@
 import { GoogleGenerativeAI, Schema } from "@google/generative-ai";
 import { AIClient, AIGenerateOptions } from "./types";
+import { env } from "@/lib/env";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const GEMINI_API_KEY = env.GEMINI_API_KEY;
 const DEFAULT_MODEL = "gemini-2.5-flash";
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);

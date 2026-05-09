@@ -2,9 +2,17 @@ import { NextResponse } from "next/server";
 import { aiClient } from "@/lib/ai/provider";
 import { RESUME_ANALYZER_SYSTEM_PROMPT, buildResumeAnalyzerPrompt } from "@/lib/ai/prompts";
 import type { ParsedJD, ResumeAnalysis, ResumeGapAnalysis, TailoredBullet } from "@/types";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   try {
+    // Auth check
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { parsedJD, resumeText } = body;
 
@@ -18,6 +26,13 @@ export async function POST(request: Request) {
     if (!resumeText || typeof resumeText !== "string" || resumeText.length < 200) {
       return NextResponse.json(
         { success: false, error: "Resume text must be at least 200 characters" },
+        { status: 400 }
+      );
+    }
+
+    if (resumeText.length > 20000) {
+      return NextResponse.json(
+        { success: false, error: "Resume text is too long (max 20,000 chars)" },
         { status: 400 }
       );
     }
@@ -66,3 +81,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

@@ -2,15 +2,30 @@ import { NextResponse } from "next/server";
 import { aiClient } from "@/lib/ai/provider";
 import { JD_PARSER_SYSTEM_PROMPT, buildJDParserPrompt } from "@/lib/ai/prompts";
 import { ParsedJD } from "@/types";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   try {
+    // Auth check
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
     const { jdText } = body;
 
     if (!jdText || typeof jdText !== "string" || jdText.length < 100) {
       return NextResponse.json(
         { success: false, error: "JD is too short (min 100 chars)" },
+        { status: 400 }
+      );
+    }
+
+    if (jdText.length > 15000) {
+      return NextResponse.json(
+        { success: false, error: "JD is too long (max 15,000 chars)" },
         { status: 400 }
       );
     }
@@ -39,3 +54,4 @@ export async function POST(req: Request) {
     );
   }
 }
+

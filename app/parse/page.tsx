@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, CheckCircle2, ArrowLeft, Loader2, Copy, Check, Download, X, Home, ChevronRight, Lightbulb, Sparkles, Clock, ArrowRight, MessageSquare, CalendarDays, Briefcase, Plus, Tags, ShieldCheck, Bookmark } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ArrowLeft, Loader2, Copy, Check, Download, X, Home, ChevronRight, Lightbulb, Sparkles, ArrowRight, MessageSquare, CalendarDays, Briefcase, Plus, Tags, ShieldCheck, Bookmark } from "lucide-react";
 import { motion } from "framer-motion";
 import { storage } from "@/lib/storage/storage";
 import { ParsedJD, ResumeAnalysis, OutreachTone, ColdOutreach, PrepPlan, ApplicationCard } from "@/types";
 import { CardSkeleton, PlanDaySkeleton } from "@/components/shared/Skeleton";
-import dynamic from "next/dynamic";
 import { ResumeSection } from "@/components/parse/ResumeSection";
+import { toast } from "sonner";
 
 function ParsePageContent() {
   const searchParams = useSearchParams();
@@ -59,9 +59,7 @@ function ParsePageContent() {
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<{ source: string; charCount: number } | null>(null);
 
-  // Stubs for Sidebar
-  const recentJDs: ParsedJD[] = [];
-  const loadExampleJD = () => {};
+
 
   function isValidURL(str: string): boolean {
     if (!str) return false;
@@ -173,6 +171,7 @@ function ParsePageContent() {
       if (!data.success) throw new Error(data.error || "Failed to parse JD");
       setResult(data.data);
       await storage.saveParsedJD(data.data);
+      toast.success("JD parsed successfully", { description: `${data.data.role} at ${data.data.company}` });
 
       setTimeout(() => {
         resultsRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -224,6 +223,7 @@ function ParsePageContent() {
       if (!data.success) throw new Error(data.error || "AI couldn't analyze — try again");
       setResumeAnalysis(data.data);
       await storage.saveResumeAnalysis(data.data);
+      toast.success("Resume analyzed", { description: `Match: ${data.data.gapAnalysis.matchLabel}` });
 
       setTimeout(() => {
         analysisRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -252,6 +252,7 @@ function ParsePageContent() {
       setOutreach(data.data);
       await storage.saveOutreach(data.data);
       setIsEditingOutreach(false);
+      toast.success("Outreach messages generated");
 
       setTimeout(() => {
         outreachRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -286,6 +287,7 @@ function ParsePageContent() {
       if (!data.success) throw new Error(data.error || "Failed to generate prep plan");
       setPrepPlan(data.data);
       await storage.savePrepPlan(data.data);
+      toast.success("7-day prep plan created");
 
       setTimeout(() => {
         planRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -351,12 +353,14 @@ function ParsePageContent() {
 
     await storage.saveApplication(newApp);
     setIsSaved(true);
+    toast.success("Saved to tracker", { description: `${result.role} at ${result.company}` });
   };
 
   // Helpers
   const copyText = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
+    toast.success("Copied to clipboard");
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -441,6 +445,9 @@ function ParsePageContent() {
                     placeholder="Paste the full job description here..."
                     className="w-full h-72 bg-transparent p-5 text-zinc-200 placeholder:text-zinc-600 resize-none focus:outline-none text-sm leading-relaxed"
                   />
+                </div>
+                <div className="mt-1.5 flex justify-end">
+                  <span className="kbd-hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> to parse</span>
                 </div>
 
                 <div className="mt-5 flex items-center justify-between gap-4">
@@ -532,7 +539,13 @@ function ParsePageContent() {
 
         {/* STAGE 2: RESULTS */}
         {result && (
-          <div ref={resultsRef} className="transition-opacity duration-500 opacity-100 space-y-8">
+          <motion.div 
+            ref={resultsRef} 
+            className="space-y-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          >
             
             {/* --- JD RESULTS SECTION --- */}
             <div className="space-y-5">
@@ -927,7 +940,7 @@ function ParsePageContent() {
 
             <footer className="pt-8 pb-4 text-center">
             </footer>
-          </div>
+          </motion.div>
         )}
           </div>
 
@@ -957,42 +970,36 @@ function ParsePageContent() {
               </ul>
             </div>
 
-            {/* Try example */}
-            <button
-              onClick={loadExampleJD}
-              className="w-full glass rounded-xl p-5 border border-white/[0.06] hover:border-violet-500/30 transition text-left group"
-            >
-              <div className="flex items-center gap-2 mb-2">
+            {/* Workflow steps */}
+            <div className="glass rounded-xl p-5 border border-white/[0.06]">
+              <div className="flex items-center gap-2 mb-3">
                 <div className="w-6 h-6 rounded-md bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
                   <Sparkles className="w-3.5 h-3.5 text-violet-400" />
                 </div>
-                <h3 className="text-sm font-semibold text-white">Try an example</h3>
+                <h3 className="text-sm font-semibold text-white">Workflow</h3>
               </div>
-              <p className="text-[13px] text-[#A1A1AA] leading-relaxed">Load a sample APM job description to see it in action.</p>
-              <div className="text-xs text-violet-300 hover:text-violet-200 mt-3 inline-flex items-center gap-1 font-medium transition-colors">
-                Load Example <ArrowRight className="w-3 h-3" />
-              </div>
-            </button>
-
-            {/* Recent (only if any exist) */}
-            {recentJDs.length > 0 && (
-              <div className="glass rounded-xl p-5 border border-white/[0.06]">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded-md bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-                    <Clock className="w-3.5 h-3.5 text-violet-400" />
+              <div className="space-y-2.5">
+                {[
+                  { step: "1", label: "Parse JD", done: !!result },
+                  { step: "2", label: "Analyze Resume", done: !!resumeAnalysis },
+                  { step: "3", label: "Generate Outreach", done: !!outreach },
+                  { step: "4", label: "Create Prep Plan", done: !!prepPlan },
+                ].map((item) => (
+                  <div key={item.step} className="flex items-center gap-3">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border ${
+                      item.done 
+                        ? "bg-violet-500/20 border-violet-500/40 text-violet-300" 
+                        : "bg-white/[0.03] border-white/[0.08] text-zinc-500"
+                    }`}>
+                      {item.done ? <Check className="w-3 h-3" /> : item.step}
+                    </div>
+                    <span className={`text-[13px] ${item.done ? "text-white" : "text-zinc-500"}`}>
+                      {item.label}
+                    </span>
                   </div>
-                  <h3 className="text-sm font-semibold text-white">Recently parsed</h3>
-                </div>
-                <div className="space-y-2">
-                  {recentJDs.slice(0, 3).map((jd) => (
-                    <button key={jd.id} className="w-full text-left p-2 rounded-lg hover:bg-white/[0.03] transition">
-                      <div className="text-xs font-medium text-white truncate">{jd.role}</div>
-                      <div className="text-xs text-zinc-500 truncate">{jd.company}</div>
-                    </button>
-                  ))}
-                </div>
+                ))}
               </div>
-            )}
+            </div>
           </aside>
         </div>
       </div>
@@ -1008,8 +1015,4 @@ function ParsePageWrapper() {
   );
 }
 
-const ParsePage = dynamic(() => Promise.resolve(ParsePageWrapper), {
-  ssr: false,
-});
-
-export default ParsePage;
+export default ParsePageWrapper;

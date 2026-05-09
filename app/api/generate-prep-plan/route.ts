@@ -3,9 +3,17 @@ import { aiClient } from "@/lib/ai/provider";
 import { PREP_PLAN_SYSTEM_PROMPT, buildPrepPlanPrompt } from "@/lib/ai/prompts";
 import { ParsedJD } from "@/types";
 import { randomUUID } from "crypto";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   try {
+    // Auth check
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
     const { parsedJD } = body as { parsedJD: ParsedJD };
 
