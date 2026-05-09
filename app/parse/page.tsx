@@ -3,7 +3,6 @@
 import { useState, KeyboardEvent, useRef, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -61,7 +60,7 @@ function ParsePageContent() {
   const [importSuccess, setImportSuccess] = useState<{ source: string; charCount: number } | null>(null);
 
   // Stubs for Sidebar
-  const recentJDs: any[] = [];
+  const recentJDs: ParsedJD[] = [];
   const loadExampleJD = () => {};
 
   function isValidURL(str: string): boolean {

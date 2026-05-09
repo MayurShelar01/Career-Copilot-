@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { storage } from "@/lib/storage/storage";
@@ -119,9 +120,11 @@ export function Header() {
                 className="flex items-center gap-2 hover:opacity-80 transition-opacity focus:outline-none"
               >
                 {user.user_metadata?.avatar_url ? (
-                  <img 
+                  <Image 
                     src={user.user_metadata.avatar_url} 
                     alt="Avatar" 
+                    width={32}
+                    height={32}
                     className="w-8 h-8 rounded-full border border-[#262626]" 
                   />
                 ) : (
