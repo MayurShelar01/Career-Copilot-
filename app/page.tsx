@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Search, FileCheck, PenTool, MessageSquare, Calendar, Layout, ArrowRight, Lock } from "lucide-react";
+import { Search, FileCheck, PenTool, MessageSquare, Calendar, Layout, ArrowRight, Lock, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
@@ -10,6 +10,21 @@ import type { User } from "@supabase/supabase-js";
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signingIn, setSigningIn] = useState(false);
+
+  const handleSignIn = async () => {
+    setSigningIn(true);
+    const supabase = createClient();
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${siteUrl}/auth/callback`,
+      },
+    });
+    // If we reach here OAuth popup was blocked or failed — reset spinner
+    setSigningIn(false);
+  };
 
   useEffect(() => {
     const supabase = createClient();
@@ -126,10 +141,17 @@ export default function Home() {
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               ) : (
-                <Link href="/login" className="btn-glow px-7 py-3.5 rounded-full text-white font-medium inline-flex items-center gap-2">
-                  Sign in with Google
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
+                <button
+                  onClick={handleSignIn}
+                  disabled={signingIn}
+                  className="btn-glow px-7 py-3.5 rounded-full text-white font-medium inline-flex items-center gap-2 disabled:opacity-70 disabled:cursor-wait"
+                >
+                  {signingIn ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Connecting...</>
+                  ) : (
+                    <>Sign in with Google <ArrowRight className="w-4 h-4" /></>
+                  )}
+                </button>
               )}
               <Link href="/tracker" className="glass px-7 py-3.5 rounded-full text-white font-medium border border-white/10 hover:border-white/20 hover:bg-white/[0.04] transition">
                 View Tracker
@@ -176,11 +198,18 @@ export default function Home() {
               </Button>
             </Link>
           ) : (
-            <Link href="/login">
-              <Button size="lg" className="text-lg px-8 py-6 rounded-full bg-violet-500 hover:bg-violet-600 text-white">
-                Sign in with Google →
-              </Button>
-            </Link>
+            <Button
+              onClick={handleSignIn}
+              disabled={signingIn}
+              size="lg"
+              className="text-lg px-8 py-6 rounded-full bg-violet-500 hover:bg-violet-600 text-white disabled:opacity-70 disabled:cursor-wait"
+            >
+              {signingIn ? (
+                <><Loader2 className="w-5 h-5 animate-spin" /> Connecting...</>
+              ) : (
+                "Sign in with Google →"
+              )}
+            </Button>
           )}
         </section>
 
