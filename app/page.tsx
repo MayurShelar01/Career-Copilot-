@@ -2,15 +2,18 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Search, FileCheck, PenTool, MessageSquare, Calendar, Layout, ArrowRight, Lock, Loader2 } from "lucide-react";
+import { Search, FileCheck, PenTool, MessageSquare, Calendar, Layout, ArrowRight, Lock, Loader2, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 
-export default function Home() {
+function HomeContent() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [signingIn, setSigningIn] = useState(false);
+  const searchParams = useSearchParams();
+  const errorMessage = searchParams.get("error");
 
   const handleSignIn = async () => {
     setSigningIn(true);
@@ -114,13 +117,21 @@ export default function Home() {
         <section className="relative overflow-hidden w-full">
           <div className="absolute inset-0 bg-grid pointer-events-none" />
           <div className="relative max-w-5xl mx-auto px-6 pt-24 pb-20 text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass border border-violet-500/30 text-violet-300 text-sm font-medium mb-8">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500" />
-              </span>
-              Built for aspiring PMs
-            </div>
+            
+            {errorMessage ? (
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-medium mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
+                <AlertTriangle className="w-4 h-4" />
+                {errorMessage}
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass border border-violet-500/30 text-violet-300 text-sm font-medium mb-8">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500" />
+                </span>
+                Built for aspiring PMs
+              </div>
+            )}
             
             <h1 className="text-6xl md:text-7xl font-bold tracking-tight text-white mb-6">
               PM Career <span className="text-gradient-violet">Copilot</span>
@@ -221,5 +232,17 @@ export default function Home() {
         </p>
       </footer>
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }

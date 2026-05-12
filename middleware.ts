@@ -11,12 +11,13 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith("/parse") || pathname.startsWith("/tracker") || pathname.startsWith("/analytics")) {
     if (!user) {
       const url = request.nextUrl.clone();
-      url.pathname = "/login";
+      url.pathname = "/";
       return Response.redirect(url);
     }
   }
 
-  // Redirect authenticated users away from /login
+  // Redirect authenticated users away from home (if they try to access it while logged in and we want to send them to workspace)
+  // Actually, usually users can stay on home, but let's keep it simple.
   if (pathname === "/login") {
     if (user) {
       const url = request.nextUrl.clone();
